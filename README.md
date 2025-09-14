@@ -2,6 +2,12 @@
 
 A gamified learning platform built using the MERN stack (MongoDB, Express, React, Node.js) that helps learners understand MERN concepts through interactive quizzes, coding challenges, and games while earning points, badges, and ranks.
 
+## 🔗 Repository Links
+
+- **GitHub Repository**: [https://github.com/pavanchinchalpet/learn-mern](https://github.com/pavanchinchalpet/learn-mern)
+- **Live Demo**: Coming Soon
+- **Issues**: [Report a Bug](https://github.com/pavanchinchalpet/learn-mern/issues)
+
 ## 🚀 Features
 
 ### 👨‍🎓 User Features
@@ -47,7 +53,7 @@ A gamified learning platform built using the MERN stack (MongoDB, Express, React
 ## 📂 Project Structure
 
 ```
-mern-quest/
+learn-mern/
 ├── api/                    # Backend API
 │   ├── config/            # Database configuration
 │   ├── controllers/       # Business logic
@@ -80,8 +86,8 @@ mern-quest/
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd mern-quest
+   git clone https://github.com/pavanchinchalpet/learn-mern.git
+   cd learn-mern
    ```
 
 2. **Install dependencies**
@@ -95,7 +101,7 @@ mern-quest/
    ```env
    NODE_ENV=development
    PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/mern-quest
+   MONGODB_URI=mongodb://localhost:27017/learn-mern
    JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
    CLIENT_URL=http://localhost:3000
    ```
