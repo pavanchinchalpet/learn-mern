@@ -1,0 +1,19 @@
+{
+  "name": "mern-quest",
+  "version": "1.0.0",
+  "description": "A gamified learning platform built using the MERN stack",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd api && npm run dev",
+    "client": "cd web && npm start",
+    "install-all": "npm install && cd api && npm install && cd ../web && npm install",
+    "seed": "cd api && npm run seed"
+  },
+  "keywords": ["mern", "quiz", "learning", "gamification"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
