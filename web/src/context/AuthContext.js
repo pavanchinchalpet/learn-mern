@@ -51,7 +51,65 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
+      let message = 'Login failed';
+      
+      if (error.response?.data?.errors) {
+        // Handle validation errors
+        const validationErrors = error.response.data.errors;
+        message = validationErrors.map(err => err.msg).join(', ');
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      
+      setError(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const sendOTP = async (email) => {
+    try {
+      setError(null);
+      const response = await api.post('/api/auth/send-otp', { email });
+      
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      let message = 'Failed to send OTP';
+      
+      if (error.response?.data?.errors) {
+        // Handle validation errors
+        const validationErrors = error.response.data.errors;
+        message = validationErrors.map(err => err.msg).join(', ');
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      
+      setError(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const verifyOTP = async (email, otp) => {
+    try {
+      setError(null);
+      const response = await api.post('/api/auth/verify-otp', { email, otp });
+      const { token, user } = response.data;
+      
+      localStorage.setItem('token', token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setUser(user);
+      
+      return { success: true };
+    } catch (error) {
+      let message = 'OTP verification failed';
+      
+      if (error.response?.data?.errors) {
+        // Handle validation errors
+        const validationErrors = error.response.data.errors;
+        message = validationErrors.map(err => err.msg).join(', ');
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      
       setError(message);
       return { success: false, error: message };
     }
@@ -73,7 +131,16 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed';
+      let message = 'Registration failed';
+      
+      if (error.response?.data?.errors) {
+        // Handle validation errors
+        const validationErrors = error.response.data.errors;
+        message = validationErrors.map(err => err.msg).join(', ');
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      
       setError(message);
       return { success: false, error: message };
     }
@@ -98,7 +165,9 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
-    setError
+    setError,
+    sendOTP,
+    verifyOTP
   };
 
   return (

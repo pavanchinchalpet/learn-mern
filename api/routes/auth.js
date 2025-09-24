@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { auth } = require('../middleware/auth');
-const { register, login, getProfile } = require('../controllers/authController');
+const { register, login, getProfile, sendOTP, verifyOTP } = require('../controllers/authController');
 
 const router = express.Router();
 
@@ -33,6 +33,29 @@ router.post('/login', [
     .exists()
     .withMessage('Password is required')
 ], login);
+
+// @route   POST /api/auth/send-otp
+// @desc    Send OTP for login
+// @access  Public
+router.post('/send-otp', [
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email')
+], sendOTP);
+
+// @route   POST /api/auth/verify-otp
+// @desc    Verify OTP and login
+// @access  Public
+router.post('/verify-otp', [
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email'),
+  body('otp')
+    .isLength({ min: 6, max: 6 })
+    .withMessage('OTP must be 6 digits')
+    .isNumeric()
+    .withMessage('OTP must contain only numbers')
+], verifyOTP);
 
 // @route   GET /api/auth/profile
 // @desc    Get user profile

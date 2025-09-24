@@ -21,14 +21,14 @@ function App() {
           <Navbar />
           <main className="container">
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/quiz" element={<PrivateRoute><Quiz /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/leaderboard" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </main>
         </div>
