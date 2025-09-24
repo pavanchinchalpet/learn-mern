@@ -9,7 +9,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/login');
   };
 
   return (
@@ -21,11 +21,10 @@ const Navbar = () => {
         </Link>
         
         <div className="navbar-nav">
-          <Link to="/" className="nav-link">Home</Link>
-          <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
-          
           {user ? (
             <>
+              <Link to="/" className="nav-link">Home</Link>
+              <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
               <Link to="/quiz" className="nav-link">Quiz</Link>
               <Link to="/profile" className="nav-link">Profile</Link>
               {user.isAdmin && (
