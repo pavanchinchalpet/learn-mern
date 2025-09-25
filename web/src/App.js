@@ -17,9 +17,9 @@ function App() {
   return (
     <AuthProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="App">
+        <div className="App min-h-screen bg-quest-gradient">
           <Navbar />
-          <main className="container">
+          <main>
             <Routes>
               <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
               <Route path="/login" element={<Login />} />
