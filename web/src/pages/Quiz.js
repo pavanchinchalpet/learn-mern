@@ -579,9 +579,9 @@ const Quiz = () => {
 
   return (
     <div className="quiz-wrapper">
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, maxWidth: 1400, margin: '0 auto', padding: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, maxWidth: 1400, margin: '0 auto', padding: '24px', paddingTop: '80px' }}>
         {/* Left Fixed Panel */}
-        <aside style={{ background: 'transparent', color: '#ffffff', position: 'sticky', top: 0, alignSelf: 'start', height: 'calc(100vh - 48px)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+        <aside style={{ background: 'transparent', color: '#ffffff', position: 'sticky', top: '80px', alignSelf: 'start', height: 'calc(100vh - 128px)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingRight: 16 }}>
             {/* Title */}
             <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, marginBottom: 12 }}>{selectedQuiz.title || 'Quiz'}</div>
