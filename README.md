@@ -1,10 +1,10 @@
 
 # learn-mern
-A gamified learning platform built using the MERN stack
+A comprehensive learning platform built using the MERN stack
 
-# 🎮 MERN Quest - Learn MERN by Playing
+# 🎓 MERN Quest - Complete Learning Platform
 
-A gamified learning platform built using the MERN stack (MongoDB, Express, React, Node.js) that helps learners understand MERN concepts through interactive quizzes, coding challenges, and games while earning points, badges, and ranks.
+A comprehensive learning platform built using the MERN stack (MongoDB, Express, React, Node.js) that helps learners master MERN concepts through structured courses, interactive lessons, coding exercises, and gamified quizzes while earning points, badges, and climbing levels.
 
 ## 🔗 Repository Links
 
@@ -15,25 +15,36 @@ A gamified learning platform built using the MERN stack (MongoDB, Express, React
 ## 🚀 Features
 
 ### 👨‍🎓 User Features
-- ✅ **Authentication**: JWT-based signup/login system
-- ✅ **Interactive Quizzes**: Take quizzes by category (MongoDB, Express, React, Node)
+- ✅ **Authentication**: JWT-based signup/login system with OTP support
+- ✅ **Course Management**: Browse, enroll, and track progress in structured courses
+- ✅ **Interactive Lessons**: Video tutorials, articles, coding exercises, and projects
+- ✅ **Quiz System**: Take quizzes by category (MongoDB, Express, React, Node)
+- ✅ **Progress Tracking**: Detailed analytics and performance monitoring
 - ✅ **Gamification**: Earn XP, points, badges, and climb levels
-- ✅ **Progress Tracking**: View detailed statistics and performance analytics
-- ✅ **Leaderboard**: Compete with other learners
+- ✅ **Learning Paths**: Structured curriculum for different skill levels
+- ✅ **Notes & Bookmarks**: Personal learning tools and progress tracking
+- ✅ **Leaderboard**: Compete with other learners globally
 - ✅ **Profile Management**: Customize avatar and track achievements
 - ✅ **Daily Streaks**: Build momentum with consistent learning
 
 ### 🛠 Admin Features
-- ✅ **Quiz Management**: Add, update, and delete quiz questions
+- ✅ **Course Management**: Create, update, and organize courses and lessons
+- ✅ **Content Management**: Upload videos, articles, and coding exercises
 - ✅ **User Analytics**: Track user performance and platform statistics
-- ✅ **Category Management**: Organize quizzes by MERN stack components
-- ✅ **Real-time Dashboard**: Monitor platform activity
+- ✅ **Quiz Management**: Add, update, and delete quiz questions
+- ✅ **Learning Path Management**: Design structured learning curricula
+- ✅ **Category Management**: Organize content by MERN stack components
+- ✅ **Real-time Dashboard**: Monitor platform activity and user engagement
 
-### 🌟 Bonus Features
+### 🌟 Advanced Features
 - 🔥 **Daily Streaks & XP Boosters**
 - 🎭 **Avatar System & Achievements**
 - ⚡ **Multiplayer Quiz Battles** (Socket.IO ready)
 - 📊 **Advanced Analytics & Reporting**
+- 🎯 **Personalized Learning Recommendations**
+- 📱 **Responsive Design** for all devices
+- 🔔 **Real-time Notifications** for course updates
+- 📜 **Certificates** for course completion
 
 ## 🛠 Tech Stack
 
@@ -262,6 +273,18 @@ The project includes comprehensive sample quiz data covering all MERN stack comp
 - Intuitive navigation
 - Loading states and error handling
 
+### Latest UI Updates (Quiz Experience)
+- Minimal, exam-style layout focused on the question interface
+- Left dark sidebar with:
+  - Topic name and attempted/unattempted indicators
+  - "Questions Attempted" counter (e.g., 3 / 10)
+  - Grid of numbered buttons for question navigation (current, attempted, unattempted states)
+- Centered white question card on the right with fixed size (static background that never changes between questions)
+- Plain timer text at the top-right of the card (no colored bars)
+- Options rendered as simple outlined choices with A/B/C/D markers
+- Bottom action row with uniformly sized buttons: Clear, Skip, Submit (yellow)
+- No extra headers, review panels, or dynamic background changes; only question content updates
+
 ## 🔒 Security Features
 
 - JWT-based authentication
@@ -277,6 +300,18 @@ The project includes comprehensive sample quiz data covering all MERN stack comp
 1. Build the React app: `npm run build`
 2. Deploy to Vercel or Netlify
 3. Set environment variables
+
+#### Building and pushing only the frontend (web)
+From the repository root:
+```bash
+cd web
+npm ci
+npm run build
+cd ..
+git add web
+git commit -m "build(web): quiz UI - centered card, static background, sidebar nav"
+git push origin <your-branch>
+```
 
 ### Backend (Render/Heroku)
 1. Set up MongoDB Atlas
