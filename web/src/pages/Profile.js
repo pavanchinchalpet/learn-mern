@@ -95,48 +95,48 @@ const Profile = () => {
   }
 
   return (
-    <div className="profile-page">
-      <div className="profile-content">
+    <div className="profile-page" style={{ background: '#0f172a', color: '#e5e7eb', minHeight: '100vh' }}>
+      <div className="profile-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Main Profile Card */}
-        <div className="profile-main-card">
-          <div className="profile-main-content">
-            <div className="profile-avatar-large">
+        <div className="profile-main-card" style={{ background: '#111827', border: '1px solid #1f2937', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', borderRadius: '1rem' }}>
+          <div className="profile-main-content" style={{ alignItems: 'center' }}>
+            <div className="profile-avatar-large" style={{ background: '#0b1220', border: '1px solid #1f2937', color: '#e5e7eb' }}>
               {user.avatar === 'default' ? user.username.charAt(0).toUpperCase() : user.avatar}
             </div>
             <div className="profile-main-info">
-              <h1 className="profile-name">{user.username}</h1>
-              <p className="profile-title">Level {user.level} MERN Stack Developer</p>
+              <h1 className="profile-name" style={{ color: '#f8fafc' }}>{user.username}</h1>
+              <p className="profile-title" style={{ color: '#94a3b8' }}>Level {user.level} MERN Stack Developer</p>
               <div className="profile-stats-row">
                 <div className="profile-stat">
                   <span className="stat-icon">⚡</span>
-                  <span className="stat-value">{user.points} XP</span>
+                  <span className="stat-value" style={{ color: '#93c5fd' }}>{user.points} XP</span>
                 </div>
                 <div className="profile-stat">
                   <span className="stat-icon">🎯</span>
-                  <span className="stat-value">{user.streak} day streak</span>
+                  <span className="stat-value" style={{ color: '#fbbf24' }}>{user.streak} day streak</span>
                 </div>
                 <div className="profile-stat">
                   <span className="stat-icon">🏆</span>
-                  <span className="stat-value">Rank #12</span>
+                  <span className="stat-value" style={{ color: '#a78bfa' }}>Rank #12</span>
                 </div>
                 <div className="profile-stat">
                   <span className="stat-icon">📅</span>
-                  <span className="stat-value">Joined March 2024</span>
+                  <span className="stat-value" style={{ color: '#94a3b8' }}>Joined March 2024</span>
                 </div>
               </div>
             </div>
-            <div className="profile-progress">
-              <div className="progress-text">12/20</div>
-              <div className="progress-label">Quests Completed</div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '60%' }}></div>
+            <div className="profile-progress" style={{ textAlign: 'center' }}>
+              <div className="progress-text" style={{ color: '#f8fafc' }}>12/20</div>
+              <div className="progress-label" style={{ color: '#94a3b8' }}>Quests Completed</div>
+              <div className="progress-bar" style={{ background: '#1f2937' }}>
+                <div className="progress-fill" style={{ width: '60%', background: '#4f46e5' }}></div>
               </div>
             </div>
           </div>
         </div>
         {editing && (
-        <div className="card mb-3">
-          <div className="card-content">
+        <div className="card mb-3" style={{ background: '#111827', border: '1px solid #1f2937' }}>
+          <div className="card-content" style={{ color: '#e5e7eb' }}>
             <h3 style={{ marginBottom: '1.5rem' }}>Edit Profile</h3>
             <div className="form-group">
               <label htmlFor="username">Username</label>
@@ -181,8 +181,8 @@ const Profile = () => {
       )}
 
       {/* Tabs */}
-      <div className="tabs">
-        <div className="tabs-list">
+      <div className="tabs" style={{ color: '#e5e7eb' }}>
+        <div className="tabs-list" style={{ background: '#111827', border: '1px solid #1f2937' }}>
           <button
             className={`tabs-trigger ${activeTab === 'overview' ? 'active' : ''}`}
             onClick={() => setActiveTab('overview')}
@@ -211,27 +211,27 @@ const Profile = () => {
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="tabs-content">
+          <div className="tabs-content" style={{ background: '#111827', border: '1px solid #1f2937' }}>
             <div className="stats-grid">
-              <div className="stat-card card-gradient-green">
-                <div className="stat-number">{user.points}</div>
-                <div className="stat-label">Total XP</div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--gray-600)', margin: '0.5rem 0 0 0' }}>+180 this week</p>
+              <div className="stat-card" style={{ background: '#0b1220', border: '1px solid #1f2937' }}>
+                <div className="stat-number" style={{ background: 'linear-gradient(135deg, #34d399, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{user.points}</div>
+                <div className="stat-label" style={{ color: '#a7f3d0' }}>Total XP</div>
+                <p style={{ fontSize: '0.75rem', color: '#34d399', margin: '0.5rem 0 0 0' }}>+180 this week</p>
               </div>
-              <div className="stat-card card-gradient-orange">
-                <div className="stat-number">{user.level}</div>
-                <div className="stat-label">Current Level</div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--gray-600)', margin: '0.5rem 0 0 0' }}>250 XP to next level</p>
+              <div className="stat-card" style={{ background: '#0b1220', border: '1px solid #1f2937' }}>
+                <div className="stat-number" style={{ background: 'linear-gradient(135deg, #a78bfa, #4f46e5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{user.level}</div>
+                <div className="stat-label" style={{ color: '#c7d2fe' }}>Current Level</div>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.5rem 0 0 0' }}>250 XP to next level</p>
               </div>
-              <div className="stat-card card-gradient-purple">
-                <div className="stat-number">{user.streak}</div>
-                <div className="stat-label">Learning Streak</div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--gray-600)', margin: '0.5rem 0 0 0' }}>days in a row</p>
+              <div className="stat-card" style={{ background: '#0b1220', border: '1px solid #1f2937' }}>
+                <div className="stat-number" style={{ background: 'linear-gradient(135deg, #fde68a, #f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{user.streak}</div>
+                <div className="stat-label" style={{ color: '#fde68a' }}>Learning Streak</div>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.5rem 0 0 0' }}>days in a row</p>
               </div>
-              <div className="stat-card">
-                <div className="stat-number">#12</div>
-                <div className="stat-label">Global Rank</div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--gray-600)', margin: '0.5rem 0 0 0' }}>out of 1,247 learners</p>
+              <div className="stat-card" style={{ background: '#0b1220', border: '1px solid #1f2937' }}>
+                <div className="stat-number" style={{ color: '#f8fafc' }}>#12</div>
+                <div className="stat-label" style={{ color: '#93c5fd' }}>Global Rank</div>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.5rem 0 0 0' }}>out of 1,247 learners</p>
               </div>
             </div>
           </div>
@@ -239,18 +239,19 @@ const Profile = () => {
 
         {/* Achievements Tab */}
         {activeTab === 'achievements' && (
-          <div className="tabs-content">
+          <div className="tabs-content" style={{ background: '#111827', border: '1px solid #1f2937' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
               {achievements.map((achievement) => (
                 <div
                   key={achievement.id}
                   className={`achievement-card ${achievement.earned ? 'unlocked' : 'locked'}`}
+                  style={{ background: '#0b1220', border: '1px solid #1f2937', color: '#e5e7eb' }}
                 >
                   <div className="achievement-icon">
                     {achievement.icon}
                   </div>
                   <h4 style={{ marginBottom: '0.5rem' }}>{achievement.name}</h4>
-                  <p style={{ color: 'var(--gray-600)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                  <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1rem' }}>
                     {achievement.description}
                   </p>
                   {achievement.earned && (
@@ -264,9 +265,9 @@ const Profile = () => {
 
         {/* Skills Tab */}
         {activeTab === 'skills' && (
-          <div className="tabs-content">
+          <div className="tabs-content" style={{ background: '#111827', border: '1px solid #1f2937' }}>
             <h3 style={{ marginBottom: '1.5rem' }}>Skill Progress</h3>
-            <p style={{ color: 'var(--gray-600)', marginBottom: '2rem' }}>Your mastery level in different technologies</p>
+            <p style={{ color: '#94a3b8', marginBottom: '2rem' }}>Your mastery level in different technologies</p>
             <div style={{ display: 'grid', gap: '1.5rem' }}>
               {skillProgress.map((skill) => (
                 <div key={skill.skill} className="skill-item">
@@ -274,10 +275,10 @@ const Profile = () => {
                     <span className="skill-name">{skill.skill}</span>
                     <span className="skill-level">{skill.level}</span>
                   </div>
-                  <div className="progress">
-                    <div className="progress-fill" style={{ width: `${skill.progress}%` }}></div>
+                  <div className="progress" style={{ background: '#1f2937' }}>
+                    <div className="progress-fill" style={{ width: `${skill.progress}%`, background: '#4f46e5' }}></div>
                   </div>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--gray-600)', margin: '0.5rem 0 0 0' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '0.5rem 0 0 0' }}>
                     {skill.progress}% complete
                   </p>
                 </div>
@@ -288,18 +289,18 @@ const Profile = () => {
 
         {/* Activity Tab */}
         {activeTab === 'activity' && (
-          <div className="tabs-content">
+          <div className="tabs-content" style={{ background: '#111827', border: '1px solid #1f2937' }}>
             <h3 style={{ marginBottom: '1.5rem' }}>Recent Activity</h3>
-            <p style={{ color: 'var(--gray-600)', marginBottom: '2rem' }}>Your latest learning achievements and progress</p>
+            <p style={{ color: '#94a3b8', marginBottom: '2rem' }}>Your latest learning achievements and progress</p>
             <div style={{ display: 'grid', gap: '1rem' }}>
               {recentActivity.map((activity) => (
-                <div key={activity.id} className="activity-item">
-                  <div className="activity-icon" style={{ background: 'var(--primary)', color: 'white' }}>
+                <div key={activity.id} className="activity-item" style={{ background: '#0b1220', border: '1px solid #1f2937' }}>
+                  <div className="activity-icon" style={{ background: '#4f46e5', color: 'white' }}>
                     {getActivityIcon(activity.type)}
                   </div>
                   <div className="activity-content">
-                    <h4 style={{ margin: '0 0 0.25rem 0' }}>{activity.title}</h4>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--gray-600)' }}>{activity.date}</p>
+                    <h4 style={{ margin: '0 0 0.25rem 0', color: '#f8fafc' }}>{activity.title}</h4>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#94a3b8' }}>{activity.date}</p>
                   </div>
                   {activity.xp && (
                     <span className="badge badge-primary">+{activity.xp} XP</span>

@@ -360,6 +360,29 @@ main {
   border-bottom: 1px solid var(--gray-200);
 }
 
+/* Custom Navbar gradient background for app */
+.navbar-custom {
+  background: linear-gradient(135deg, #0b1220 0%, #111827 100%);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid #1f2937;
+}
+
+.nav-link-custom {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  transition: var(--transition);
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+}
+.nav-link-custom:hover {
+  color: #ffffff;
+  background: rgba(255,255,255,0.08);
+}
+
 .navbar .container {
   display: flex;
   justify-content: space-between;
@@ -1063,6 +1086,12 @@ main {
   border: 1px solid var(--gray-200);
 }
 
+/* Static quiz page background wrapper */
+.quiz-wrapper {
+  min-height: 100vh;
+  background: #0b1024; /* fixed dark background for entire quiz flow */
+}
+
 .quiz-header {
   background: var(--bg-indigo);
   color: white;
@@ -1159,9 +1188,9 @@ main {
 }
 
 .quiz-option:hover {
-  border-color: var(--primary);
-  background-color: var(--gray-50);
-  transform: translateX(4px);
+  border-color: #3730a3; /* dark indigo border */
+  background-color: #111827; /* dark hover */
+  transform: translateX(3px);
 }
 
 .quiz-option:hover::before {
@@ -1169,22 +1198,22 @@ main {
 }
 
 .quiz-option.selected {
-  border-color: var(--primary);
-  background: linear-gradient(135deg, #e0e7ff, #f0f4ff);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: #4f46e5;
+  background: linear-gradient(135deg, #1f2937, #111827);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
 }
 
 .quiz-option.correct {
-  border-color: var(--success);
-  background: linear-gradient(135deg, #d1fae5, #ecfdf5);
-  color: var(--success);
+  border-color: #065f46; /* dark green */
+  background: linear-gradient(135deg, #064e3b, #052e2b);
+  color: #a7f3d0; /* mint text */
   font-weight: 600;
 }
 
 .quiz-option.incorrect {
-  border-color: var(--error);
-  background: linear-gradient(135deg, #fee2e2, #fef2f2);
-  color: var(--error);
+  border-color: #7f1d1d; /* dark red */
+  background: linear-gradient(135deg, #450a0a, #3b0a0a);
+  color: #fecaca; /* light red text */
   font-weight: 600;
 }
 
