@@ -14,7 +14,7 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  return user && user.isAdmin ? children : <Navigate to="/" replace />;
+  return user && user.isAdmin ? children : <Navigate to="/home" replace />;
 };
 
 export default AdminRoute;
