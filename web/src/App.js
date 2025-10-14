@@ -17,10 +17,9 @@ import Navbar from './components/Navbar';
 function AppShell() {
   const location = useLocation();
   const isAuth = location.pathname === '/login' || location.pathname === '/register';
-  const isQuiz = location.pathname.startsWith('/quiz');
-  const hideNavbar = isAuth || isQuiz;
+  const hideNavbar = isAuth;
   return (
-    <div className={`App min-h-screen ${isQuiz ? 'bg-white' : 'bg-quest-gradient'}`}>
+    <div className="App min-h-screen bg-quest-gradient">
       {!hideNavbar && <Navbar />}
       <main>
         <Routes>
