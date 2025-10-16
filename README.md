@@ -1,10 +1,10 @@
 
-# learn-mern
-A comprehensive learning platform built using the MERN stack
+# MERN Quest
+A comprehensive learning platform built using the MERN stack with Supabase
 
 # 🎓 MERN Quest - Complete Learning Platform
 
-A comprehensive learning platform built using the MERN stack (MongoDB, Express, React, Node.js) that helps learners master MERN concepts through structured courses, interactive lessons, coding exercises, and gamified quizzes while earning points, badges, and climbing levels.
+A comprehensive learning platform built using the MERN stack (MongoDB, Express, React, Node.js) with Supabase backend that helps learners master MERN concepts through interactive quizzes while earning points, badges, and climbing levels.
 
 ## 🔗 Repository Links
 
@@ -16,24 +16,16 @@ A comprehensive learning platform built using the MERN stack (MongoDB, Express, 
 
 ### 👨‍🎓 User Features
 - ✅ **Authentication**: JWT-based signup/login system with OTP support
-- ✅ **Course Management**: Browse, enroll, and track progress in structured courses
-- ✅ **Interactive Lessons**: Video tutorials, articles, coding exercises, and projects
 - ✅ **Quiz System**: Take quizzes by category (MongoDB, Express, React, Node)
 - ✅ **Progress Tracking**: Detailed analytics and performance monitoring
 - ✅ **Gamification**: Earn XP, points, badges, and climb levels
-- ✅ **Learning Paths**: Structured curriculum for different skill levels
-- ✅ **Notes & Bookmarks**: Personal learning tools and progress tracking
 - ✅ **Leaderboard**: Compete with other learners globally
 - ✅ **Profile Management**: Customize avatar and track achievements
 - ✅ **Daily Streaks**: Build momentum with consistent learning
 
 ### 🛠 Admin Features
-- ✅ **Course Management**: Create, update, and organize courses and lessons
-- ✅ **Content Management**: Upload videos, articles, and coding exercises
 - ✅ **User Analytics**: Track user performance and platform statistics
 - ✅ **Quiz Management**: Add, update, and delete quiz questions
-- ✅ **Learning Path Management**: Design structured learning curricula
-- ✅ **Category Management**: Organize content by MERN stack components
 - ✅ **Real-time Dashboard**: Monitor platform activity and user engagement
 
 ### 🌟 Advanced Features
@@ -58,8 +50,7 @@ A comprehensive learning platform built using the MERN stack (MongoDB, Express, 
 ### Backend
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
-- **MongoDB** - NoSQL database
-- **Mongoose** - Object Data Modeling
+- **Supabase** - Backend-as-a-Service (Database & Auth)
 - **JWT** - Authentication
 - **Socket.IO** - Real-time features
 - **bcryptjs** - Password hashing
@@ -68,13 +59,13 @@ A comprehensive learning platform built using the MERN stack (MongoDB, Express, 
 ## 📂 Project Structure
 
 ```
-learn-mern/
+mern-quest/
 ├── api/                    # Backend API
-│   ├── config/            # Database configuration
+│   ├── config/            # Supabase configuration
 │   ├── controllers/       # Business logic
 │   ├── middleware/        # Authentication middleware
-│   ├── models/           # Mongoose schemas
 │   ├── routes/           # Express routes
+│   ├── utils/            # Supabase helpers
 │   ├── server.js         # Main server file
 │   └── package.json      # Backend dependencies
 ├── web/                   # Frontend React app
@@ -87,14 +78,14 @@ learn-mern/
 │   │   ├── App.js        # Main app component
 │   │   └── index.js      # Entry point
 │   └── package.json      # Frontend dependencies
-└── package.json          # Root package.json
+└── README.md             # Project documentation
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js (v14 or higher)
-- MongoDB (local or MongoDB Atlas)
+- Supabase account
 - npm or yarn
 
 ### Installation
@@ -116,24 +107,33 @@ learn-mern/
    ```env
    NODE_ENV=development
    PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/learn-mern
-   JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+   
+   # Supabase Configuration
+   SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   
+   # JWT Configuration
+   JWT_SECRET=mern-quest-super-secret-jwt-key-2024
+   
+   # Client URL (for CORS)
    CLIENT_URL=http://localhost:3000
    ```
 
-4. **Seed the database with sample data**
-   ```bash
-   npm run seed
-   ```
+4. **Set up Supabase Database**
+   
+   - Create a new Supabase project
+   - Run the SQL migrations to create tables
+   - Insert sample quiz data
+   - Configure authentication settings
 
 5. **Start the application**
    ```bash
-   # Start both frontend and backend
-   npm run dev
+   # Start backend
+   cd api && npm start
    
-   # Or start individually
-   npm run server  # Backend on port 5000
-   npm run client  # Frontend on port 3000
+   # Start frontend (in new terminal)
+   cd web && npm start
    ```
 
 6. **Access the application**
@@ -141,9 +141,9 @@ learn-mern/
    - Backend API: http://localhost:5000
 
 ### 🔑 Sample Login Credentials
-After running the seed script, you can use these credentials:
-- **Admin User**: admin@mernquest.com / admin123
-- **Regular User**: learner@mernquest.com / admin123
+After setting up the database, you can register new users or use existing ones:
+- **Admin User**: Create via registration with admin privileges
+- **Regular User**: Register through the signup form
 
 ## 📝 Sample Data
 
@@ -168,59 +168,60 @@ The project includes comprehensive sample quiz data covering all MERN stack comp
 - ✅ Difficulty progression
 - ✅ Real-world MERN stack scenarios
 
-## 📊 Database Schema
+## 📊 Database Schema (Supabase)
 
-### User Model
-```javascript
-{
-  username: String,
-  email: String,
-  password: String (hashed),
-  points: Number,
-  level: Number,
-  badges: [String],
-  streak: Number,
-  totalQuizzes: Number,
-  correctAnswers: Number,
-  totalAnswers: Number,
-  isAdmin: Boolean,
-  avatar: String
-}
+### Users Table
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  points INTEGER DEFAULT 0,
+  level INTEGER DEFAULT 1,
+  streak INTEGER DEFAULT 0,
+  total_quizzes INTEGER DEFAULT 0,
+  correct_answers INTEGER DEFAULT 0,
+  total_answers INTEGER DEFAULT 0,
+  is_admin BOOLEAN DEFAULT FALSE,
+  avatar VARCHAR(50) DEFAULT 'default',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
-### Quiz Model
-```javascript
-{
-  question: String,
-  options: [String],
-  answer: String,
-  category: String (MongoDB|Express|React|Node),
-  difficulty: String (easy|medium|hard),
-  points: Number,
-  timesAnswered: Number,
-  timesCorrect: Number,
-  isActive: Boolean
-}
+### Quizzes Table
+```sql
+CREATE TABLE quizzes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  question TEXT NOT NULL,
+  options TEXT[] NOT NULL,
+  answer VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  difficulty VARCHAR(20) NOT NULL,
+  points INTEGER DEFAULT 10,
+  times_answered INTEGER DEFAULT 0,
+  times_correct INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
-### Score Model
-```javascript
-{
-  userId: ObjectId,
-  quizId: ObjectId,
-  score: Number,
-  timeTaken: Number,
-  answers: [{
-    questionId: ObjectId,
-    selectedAnswer: String,
-    isCorrect: Boolean,
-    timeSpent: Number
-  }],
-  totalQuestions: Number,
-  correctAnswers: Number,
-  streak: Number,
-  pointsEarned: Number
-}
+### Quiz Scores Table
+```sql
+CREATE TABLE quiz_scores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
+  score INTEGER NOT NULL,
+  time_taken INTEGER NOT NULL,
+  answers JSONB NOT NULL,
+  total_questions INTEGER NOT NULL,
+  correct_answers INTEGER NOT NULL,
+  streak INTEGER DEFAULT 0,
+  points_earned INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
 ## 🔧 API Endpoints
@@ -273,18 +274,6 @@ The project includes comprehensive sample quiz data covering all MERN stack comp
 - Intuitive navigation
 - Loading states and error handling
 
-### Latest UI Updates (Quiz Experience)
-- Minimal, exam-style layout focused on the question interface
-- Left dark sidebar with:
-  - Topic name and attempted/unattempted indicators
-  - "Questions Attempted" counter (e.g., 3 / 10)
-  - Grid of numbered buttons for question navigation (current, attempted, unattempted states)
-- Centered white question card on the right with fixed size (static background that never changes between questions)
-- Plain timer text at the top-right of the card (no colored bars)
-- Options rendered as simple outlined choices with A/B/C/D markers
-- Bottom action row with uniformly sized buttons: Clear, Skip, Submit (yellow)
-- No extra headers, review panels, or dynamic background changes; only question content updates
-
 ## 🔒 Security Features
 
 - JWT-based authentication
@@ -301,28 +290,17 @@ The project includes comprehensive sample quiz data covering all MERN stack comp
 2. Deploy to Vercel or Netlify
 3. Set environment variables
 
-#### Building and pushing only the frontend (web)
-From the repository root:
-```bash
-cd web
-npm ci
-npm run build
-cd ..
-git add web
-git commit -m "build(web): quiz UI - centered card, static background, sidebar nav"
-git push origin <your-branch>
-```
-
 ### Backend (Render/Heroku)
 1. Set up MongoDB Atlas
 2. Deploy to Render or Heroku
 3. Configure environment variables
 4. Set up CORS for frontend domain
 
-### Database (MongoDB Atlas)
-1. Create MongoDB Atlas cluster
-2. Get connection string
-3. Update environment variables
+### Database (Supabase)
+1. Create Supabase project
+2. Run SQL migrations
+3. Configure authentication
+4. Set up environment variables
 
 ## 🤝 Contributing
 

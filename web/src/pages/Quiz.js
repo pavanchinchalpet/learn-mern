@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { QuizSkeleton } from '../components/SkeletonLoader';
 
 const Quiz = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -18,6 +19,7 @@ const Quiz = () => {
   // Hint and explanation removed for simplified UI
   const [showFullReview, setShowFullReview] = useState(false);
   const [examActive, setExamActive] = useState(false);
+  const [pausedQuiz, setPausedQuiz] = useState(null);
   const autoSubmitTriggeredRef = useRef(false);
   const navigate = useNavigate();
 
@@ -62,19 +64,31 @@ const Quiz = () => {
     }
   }, [submitting, selectedAnswers, startTime]);
 
-  const confirmAutoSubmit = useCallback(async () => {
+  const handleQuizExit = useCallback(async () => {
     if (autoSubmitTriggeredRef.current || submitting || quizComplete) return;
-    const confirmed = window.confirm('You are attempting to leave the quiz. This will submit your test. Do you want to proceed?');
-    if (confirmed) {
-      autoSubmitTriggeredRef.current = true;
-      await handleAutoSubmit();
-    } else {
-      // Try to immediately restore exam context
-      try {
-        await requestFullscreen();
-      } catch (_) {}
-    }
-  }, [handleAutoSubmit, submitting, quizComplete]);
+    
+    // Save current quiz state for resume
+    setPausedQuiz({
+      ...selectedQuiz,
+      currentIndex: currentQuizIndex,
+      answers: selectedAnswers,
+      timeLeft: timeLeft,
+      startTime: startTime
+    });
+    
+    // Instead of auto-submitting, just pause the quiz and exit fullscreen
+    setTimerActive(false); // Pause timer
+    setExamActive(false); // Exit exam mode
+    setSelectedQuiz(null); // Return to quiz selection
+    
+    // Exit fullscreen gracefully
+    try {
+      await exitFullscreen();
+    } catch (_) {}
+    
+    // Show a message that quiz is paused
+    alert('Quiz paused. You can resume by clicking "Resume Quiz" below.');
+  }, [submitting, quizComplete, selectedQuiz, currentQuizIndex, selectedAnswers, timeLeft, startTime]);
 
   // Timer effect
   useEffect(() => {
@@ -101,6 +115,7 @@ const Quiz = () => {
   };
 
   const formatTime = (seconds) => {
+    if (!seconds || seconds < 0) return '00:00';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -116,7 +131,20 @@ const Quiz = () => {
         api.get('/api/quiz?limit=50')
       ]);
       
-      setQuizCategories(categoriesResponse.data);
+      // Normalize categories to the shape expected by the UI
+      const normalizedCategories = (categoriesResponse.data || []).map((ct) => ({
+        id: ct.id,
+        title: ct.title || ct.name || 'Category',
+        description: ct.description || '',
+        icon: ct.icon || '📚',
+        // Provide sensible defaults if backend doesn't supply these
+        difficulty: ct.difficulty || 'Mixed',
+        timeLimit: ct.timeLimit || Math.ceil((ct.count || 10) * 2), // 1:2 ratio (10 questions = 20 minutes)
+        xp: ct.xp || 100,
+        questions: ct.questions || Math.max(1, Math.min(12, ct.count || 12))
+      }));
+
+      setQuizCategories(normalizedCategories);
       setQuizzes(quizzesResponse.data);
     } catch (error) {
       console.error('Error loading quiz data:', error);
@@ -147,14 +175,15 @@ const Quiz = () => {
     const selectedCategory = quizCategories.find(cat => cat.id === categoryId);
     if (selectedCategory) {
       // Filter questions based on category
-      const filteredQuizzes = quizzes.filter(quiz => 
-        quiz.category === selectedCategory.category
-      );
+      const filteredQuizzes = quizzes.filter((quiz) => quiz.category_id === categoryId);
       
       if (filteredQuizzes.length > 0) {
-        // Limit questions based on category settings
+        // Limit questions based on category settings and remove duplicates
         const maxQuestions = Math.min(selectedCategory.questions, filteredQuizzes.length);
-        const selectedQuestions = filteredQuizzes.slice(0, maxQuestions);
+        const uniqueQuestions = filteredQuizzes.filter((quiz, index, self) => 
+          index === self.findIndex(q => q.id === quiz.id)
+        );
+        const selectedQuestions = uniqueQuestions.slice(0, maxQuestions);
         
         setSelectedQuiz({
           ...selectedCategory,
@@ -165,8 +194,9 @@ const Quiz = () => {
         setQuizComplete(false);
         setResults(null);
         
-        // Start the timer
-        startTimer(selectedCategory.timeLimit);
+        // Start the timer with 1:2 ratio (1 question = 2 minutes)
+        const calculatedTimeLimit = selectedQuestions.length * 2; // 1:2 ratio
+        startTimer(calculatedTimeLimit);
         // Enter fullscreen and mark exam active
         requestFullscreen();
         setExamActive(true);
@@ -175,6 +205,32 @@ const Quiz = () => {
         alert('No questions available for this category. Please try another quiz.');
       }
     }
+  };
+
+  const handleResumeQuiz = () => {
+    if (!pausedQuiz) return;
+    
+    // Restore quiz state
+    setSelectedQuiz(pausedQuiz);
+    setCurrentQuizIndex(pausedQuiz.currentIndex);
+    setSelectedAnswers(pausedQuiz.answers);
+    setTimeLeft(pausedQuiz.timeLeft);
+    setStartTime(pausedQuiz.startTime);
+    setQuizComplete(false);
+    setResults(null);
+    
+    // Resume timer if there's time left
+    if (pausedQuiz.timeLeft > 0) {
+      setTimerActive(true);
+    }
+    
+    // Enter fullscreen and mark exam active
+    requestFullscreen();
+    setExamActive(true);
+    autoSubmitTriggeredRef.current = false;
+    
+    // Clear paused quiz
+    setPausedQuiz(null);
   };
 
   const handleAnswerSelect = (questionId, answer) => {
@@ -225,24 +281,27 @@ const Quiz = () => {
       return;
     }
 
-    const triggerAutoSubmitOnce = () => {
-      if (!examActive || submitting || quizComplete) return;
-      if (autoSubmitTriggeredRef.current) return;
-      confirmAutoSubmit();
-    };
-
     const handleVisibility = () => {
-      if (document.hidden) triggerAutoSubmitOnce();
+      // Don't auto-submit on visibility change - just pause
+      if (document.hidden && examActive) {
+        setTimerActive(false);
+      }
     };
 
     const handleBlur = () => {
-      // Window lost focus (possible app switch or minimize)
-      triggerAutoSubmitOnce();
+      // Don't auto-submit on window blur - just pause
+      if (examActive) {
+        setTimerActive(false);
+      }
     };
 
     const handleFullscreenChange = () => {
+      // Don't auto-submit on fullscreen exit - just pause
       if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-        triggerAutoSubmitOnce();
+        if (examActive) {
+          setTimerActive(false);
+          setExamActive(false);
+        }
       }
     };
 
@@ -268,7 +327,7 @@ const Quiz = () => {
       if (key === 'escape') {
         e.preventDefault();
         e.stopPropagation();
-        exitFullscreen();
+        handleQuizExit();
       }
     };
 
@@ -289,7 +348,7 @@ const Quiz = () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [selectedQuiz, quizComplete, examActive, submitting, handleAutoSubmit, confirmAutoSubmit]);
+  }, [selectedQuiz, quizComplete, examActive, submitting, handleAutoSubmit, handleQuizExit]);
 
   const handleNext = () => {
     if (currentQuizIndex < selectedQuiz.questions.length - 1) {
@@ -300,7 +359,7 @@ const Quiz = () => {
   // Previous removed in minimal UI
 
   const clearCurrentSelection = () => {
-    const currentId = selectedQuiz.questions[currentQuizIndex]._id;
+    const currentId = selectedQuiz.questions[currentQuizIndex].id;
     const updated = { ...selectedAnswers };
     delete updated[currentId];
     setSelectedAnswers(updated);
@@ -324,7 +383,7 @@ const Quiz = () => {
 
   // Bar progress replaced with countdown bar
 
-  const getDifficultyColor = (difficulty) => {
+  const getDifficultyColor = useCallback((difficulty) => {
     switch (difficulty) {
       case 'Easy':
         return 'badge-success';
@@ -335,16 +394,24 @@ const Quiz = () => {
       default:
         return 'badge-default';
     }
-  };
+  }, []);
+
+  // Memoize expensive calculations
+  const memoizedQuizCategories = useMemo(() => {
+    return quizCategories.map((category) => ({
+      id: category.id,
+      title: category.title || category.name || 'Category',
+      description: category.description || '',
+      icon: category.icon || '📚',
+      difficulty: category.difficulty || 'Mixed',
+      timeLimit: category.timeLimit || Math.ceil((category.count || 10) * 2),
+      xp: category.xp || 100,
+      questions: category.questions || Math.max(1, Math.min(12, category.count || 12))
+    }));
+  }, [quizCategories]);
 
   if (loading) {
-    return (
-      <div className="text-center" style={{ padding: '4rem' }}>
-        <div className="spinner" style={{ width: '3rem', height: '3rem', borderWidth: '4px' }}></div>
-        <h3 style={{ marginTop: '1.5rem', color: 'var(--gray-700)' }}>Loading Quiz Categories...</h3>
-        <p style={{ color: 'var(--gray-500)', marginTop: '0.5rem' }}>Preparing your learning adventure</p>
-      </div>
-    );
+    return <QuizSkeleton />;
   }
 
   // Quiz Selection Screen
@@ -356,10 +423,58 @@ const Quiz = () => {
           <div className="page-header" style={{ background: 'linear-gradient(135deg, #111827, #0b1220)', borderBottom: '1px solid #1f2937', padding: '3rem 2rem' }}>
             <h1 style={{ color: '#f8fafc', fontSize: '3rem', fontWeight: 800, marginBottom: '1rem' }}>🧠 Knowledge Quests</h1>
             <p style={{ color: '#cbd5e1', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>Test your MERN stack skills and earn XP points</p>
+            
+            {/* Resume Quiz Button */}
+            {pausedQuiz && (
+              <div style={{ marginTop: '2rem' }}>
+                <div className="card" style={{ background: '#1f2937', border: '2px solid #f59e0b', maxWidth: '400px', margin: '0 auto' }}>
+                  <div className="card-content" style={{ padding: '1.5rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏸️</div>
+                    <h3 style={{ color: '#f8fafc', marginBottom: '0.5rem' }}>Quiz Paused</h3>
+                    <p style={{ color: '#cbd5e1', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                      You have {Math.floor(pausedQuiz.timeLeft / 60)}:{(pausedQuiz.timeLeft % 60).toString().padStart(2, '0')} remaining
+                    </p>
+                    <button 
+                      onClick={handleResumeQuiz}
+                      className="btn btn-primary" 
+                      style={{ 
+                        backgroundColor: '#f59e0b', 
+                        color: 'white', 
+                        padding: '0.75rem 1.5rem', 
+                        borderRadius: '0.5rem', 
+                        border: 'none', 
+                        fontSize: '1rem', 
+                        fontWeight: 600, 
+                        cursor: 'pointer',
+                        marginRight: '0.5rem'
+                      }}
+                    >
+                      🔄 Resume Quiz
+                    </button>
+                    <button 
+                      onClick={() => setPausedQuiz(null)}
+                      className="btn btn-secondary" 
+                      style={{ 
+                        backgroundColor: '#6b7280', 
+                        color: 'white', 
+                        padding: '0.75rem 1.5rem', 
+                        borderRadius: '0.5rem', 
+                        border: 'none', 
+                        fontSize: '1rem', 
+                        fontWeight: 600, 
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ❌ Cancel Quiz
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           {/* Quiz Categories Grid */}
           <div className="quiz-grid" style={{ padding: '3rem 2rem', maxWidth: '1400px', margin: '0 auto' }}>
-            {quizCategories.map((category) => (
+            {memoizedQuizCategories.map((category) => (
               <div key={category.id} className="card" style={{ cursor: 'pointer', transition: 'var(--transition)', border: '1px solid #1f2937', background: '#111827' }} onClick={() => handleQuizSelect(category.id)}>
                 <div className="card-header" style={{ background: 'linear-gradient(135deg, #0b1220, #0f172a)', borderBottom: '1px solid #1f2937' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -387,7 +502,7 @@ const Quiz = () => {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span>⏱️</span>
-                      <span>{category.timeLimit} min</span>
+                      <span>{category.questions * 2} min</span>
                     </div>
                   </div>
                   <button className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#4f46e5', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: 'none', fontSize: '1rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(79,70,229,0.35)' }}>
@@ -434,127 +549,297 @@ const Quiz = () => {
   // Quiz Complete Screen
   if (quizComplete && results) {
     const getPerformanceMessage = (score) => {
-      if (score >= 90) return { message: "Outstanding! 🏆", color: "var(--success)" };
-      if (score >= 80) return { message: "Excellent! 🌟", color: "var(--primary)" };
-      if (score >= 70) return { message: "Good job! 👍", color: "var(--warning)" };
-      if (score >= 60) return { message: "Not bad! 📚", color: "var(--warning)" };
-      return { message: "Keep practicing! 💪", color: "var(--error)" };
+      if (score >= 90) return { message: "Outstanding! 🏆", color: "#10b981" };
+      if (score >= 80) return { message: "Excellent! 🌟", color: "#3b82f6" };
+      if (score >= 70) return { message: "Good job! 👍", color: "#f59e0b" };
+      if (score >= 60) return { message: "Not bad! 📚", color: "#f59e0b" };
+      return { message: "Keep practicing! 💪", color: "#ef4444" };
     };
 
     const performance = getPerformanceMessage(results.score);
 
     return (
-      <div className="quiz-container" style={{ color: '#e5e7eb', background: '#0f172a' }}>
-        <div className="card text-center" style={{ padding: '2rem', background: '#111827', border: '1px solid #1f2937' }}>
+      <div style={{ 
+        minHeight: '100vh', 
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
+        color: '#e5e7eb',
+        padding: '2rem'
+      }}>
+        {/* Header Section */}
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-          <h2 style={{ fontSize: '28px', marginBottom: '8px', color: '#f8fafc' }}>
+          <h1 style={{ fontSize: '3rem', marginBottom: '0.5rem', color: '#f8fafc', fontWeight: 800 }}>
             Test Completed
-          </h2>
-          <p style={{ color: '#e5e7eb', fontSize: '16px', marginBottom: '16px' }}>
+          </h1>
+          <p style={{ color: '#cbd5e1', fontSize: '1.25rem', marginBottom: '2rem' }}>
             {performance.message}
           </p>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px', marginBottom: '16px' }}>
-            <div style={{ border: '1px solid #1f2937', padding: '8px', background: '#0b1220' }}>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: performance.color }}>{results.score}%</div>
-              <div style={{ fontSize: '12px' }}>Final Score</div>
+        </div>
+
+        {/* Summary Metrics */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: '1.5rem', 
+          marginBottom: '3rem',
+          maxWidth: '1200px',
+          margin: '0 auto 3rem auto'
+        }}>
+          <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+            <div style={{ fontSize: '3rem', fontWeight: 800, color: performance.color, marginBottom: '0.5rem' }}>
+              {results.score}%
             </div>
-            <div style={{ border: '1px solid #1f2937', padding: '8px', background: '#0b1220' }}>
-              <div style={{ fontSize: '24px', fontWeight: 700 }}>{results.correctAnswers}/{results.totalQuestions}</div>
-              <div style={{ fontSize: '12px' }}>Correct Answers</div>
+            <div style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 600 }}>Final Score</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+            <div style={{ fontSize: '3rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.5rem' }}>
+              {results.correctAnswers}/{results.totalQuestions}
             </div>
-            <div style={{ border: '1px solid #1f2937', padding: '8px', background: '#0b1220' }}>
-              <div style={{ fontSize: '24px', fontWeight: 700 }}>{results.pointsEarned}</div>
-              <div style={{ fontSize: '12px' }}>Points Earned</div>
+            <div style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 600 }}>Correct Answers</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+            <div style={{ fontSize: '3rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.5rem' }}>
+              {results.pointsEarned}
             </div>
-            <div style={{ border: '1px solid #1f2937', padding: '8px', background: '#0b1220' }}>
-              <div style={{ fontSize: '24px', fontWeight: 700 }}>{results.streak || 0}</div>
-              <div style={{ fontSize: '12px' }}>Best Streak</div>
+            <div style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 600 }}>Points Earned</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+            <div style={{ fontSize: '3rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.5rem' }}>
+              {results.streak || 0}
+            </div>
+            <div style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: 600 }}>Best Streak</div>
+          </div>
+        </div>
+
+        {/* Performance Analysis */}
+        <div style={{ 
+          marginBottom: '3rem',
+          maxWidth: '1200px',
+          margin: '0 auto 3rem auto'
+        }}>
+          <h2 style={{ 
+            marginBottom: '2rem', 
+            color: '#f8fafc', 
+            fontSize: '2rem', 
+            fontWeight: 700,
+            textAlign: 'center'
+          }}>
+            Performance
+          </h2>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+            gap: '1.5rem' 
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '1rem', 
+              padding: '1rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '0.5rem'
+            }}>
+              <div style={{ fontSize: '2rem' }}>🎯</div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#f8fafc' }}>
+                  Accuracy: {Math.round((results.correctAnswers / results.totalQuestions) * 100)}%
+                </div>
+              </div>
+            </div>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '1rem', 
+              padding: '1rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '0.5rem'
+            }}>
+              <div style={{ fontSize: '2rem' }}>⚡</div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#f8fafc' }}>
+                  Speed: {Math.round(results.timeTaken / 60)} min {results.timeTaken % 60} sec
+                </div>
+              </div>
+            </div>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '1rem', 
+              padding: '1rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '0.5rem'
+            }}>
+              <div style={{ fontSize: '2rem' }}>🔥</div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#f8fafc' }}>
+                  Streak: {results.streak || 0} consecutive correct
+                </div>
+              </div>
+            </div>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '1rem', 
+              padding: '1rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '0.5rem'
+            }}>
+              <div style={{ fontSize: '2rem' }}>🏆</div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#f8fafc' }}>
+                  XP Earned: {results.pointsEarned} points
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Performance Analysis */}
-          <div className="performance-analysis" style={{ marginTop: '16px', padding: '12px', background: '#0b1220', border: '1px solid #1f2937' }}>
-            <h3 style={{ marginBottom: '8px', color: '#f8fafc', fontSize: '18px' }}>Performance</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
-              <div className="analysis-item">
-                <div className="analysis-icon">🎯</div>
-                <div className="analysis-text">
-                  <strong>Accuracy:</strong> {Math.round((results.correctAnswers / results.totalQuestions) * 100)}%
-                </div>
-              </div>
-              <div className="analysis-item">
-                <div className="analysis-icon">⚡</div>
-                <div className="analysis-text">
-                  <strong>Speed:</strong> {Math.round(results.timeTaken / 60)} min {results.timeTaken % 60} sec
-                </div>
-              </div>
-              <div className="analysis-item">
-                <div className="analysis-icon">🔥</div>
-                <div className="analysis-text">
-                  <strong>Streak:</strong> {results.streak || 0} consecutive correct
-                </div>
-              </div>
-              <div className="analysis-item">
-                <div className="analysis-icon">🏆</div>
-                <div className="analysis-text">
-                  <strong>XP Earned:</strong> {results.pointsEarned} points
-                </div>
-              </div>
+        {/* Full Review */}
+        {Array.isArray(results.review) && results.review.length > 0 && (
+          <div style={{ 
+            maxWidth: '1200px',
+            margin: '0 auto 3rem auto'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginBottom: '2rem' 
+            }}>
+              <h2 style={{ 
+                margin: 0, 
+                fontSize: '2rem', 
+                color: '#f8fafc',
+                fontWeight: 700
+              }}>
+                Complete Review
+              </h2>
+              <button 
+                onClick={() => setShowFullReview(!showFullReview)} 
+                style={{
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                {showFullReview ? 'Hide All' : 'Show All'}
+              </button>
             </div>
-          </div>
-
-          {/* Full Review */}
-          {Array.isArray(results.review) && results.review.length > 0 && (
-            <div style={{ marginTop: '16px', border: '1px solid #1f2937', background: '#0b1220' }}>
-              <div style={{ padding: '12px', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>Complete Review</h3>
-                <button onClick={() => setShowFullReview(!showFullReview)} className="btn btn-outline">
-                  {showFullReview ? 'Hide' : 'Show'} All
-                </button>
-              </div>
-              {showFullReview && (
-                <div style={{ padding: '12px' }}>
-                  {results.review.map((item, idx) => (
-                    <div key={item.questionId || idx} style={{ borderBottom: '1px solid #1f2937', padding: '12px 0' }}>
-                      <div style={{ fontWeight: 600, marginBottom: '6px' }}>Q{idx + 1}. {item.question}</div>
-                      <div style={{ fontSize: '14px', marginBottom: '6px' }}>
-                        Your answer: <span style={{ fontWeight: 600 }}>{item.selectedAnswer || '-'}</span> {item.isCorrect ? '✓' : '✗'}
-                      </div>
-                      <div style={{ fontSize: '14px', marginBottom: '6px' }}>
-                        Correct answer: <span style={{ fontWeight: 600 }}>{item.correctAnswer}</span>
-                      </div>
-                      {Array.isArray(item.options) && item.options.length > 0 && (
-                        <div style={{ fontSize: '13px', marginBottom: '6px' }}>
-                          Options: {item.options.join(' | ')}
-                        </div>
-                      )}
-                      {item.explanation && (
-                        <div style={{ fontSize: '13px', whiteSpace: 'pre-wrap' }}>
-                          Explanation: {item.explanation}
-                        </div>
-                      )}
+            {showFullReview && (
+              <div style={{ 
+                display: 'grid', 
+                gap: '1.5rem' 
+              }}>
+                {results.review.map((item, idx) => (
+                  <div key={item.questionId || idx} style={{ 
+                    padding: '1.5rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '0.5rem'
+                  }}>
+                    <div style={{ 
+                      fontWeight: 700, 
+                      marginBottom: '1rem', 
+                      fontSize: '1.1rem',
+                      color: '#f8fafc'
+                    }}>
+                      Q{idx + 1}. {item.question}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    <div style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>
+                      Your answer: <span style={{ fontWeight: 600, color: '#f8fafc' }}>
+                        {item.selectedAnswer || '-'}
+                      </span> {item.isCorrect ? '✓' : '✗'}
+                    </div>
+                    <div style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>
+                      Correct answer: <span style={{ fontWeight: 600, color: '#f8fafc' }}>
+                        {item.correctAnswer}
+                      </span>
+                    </div>
+                    {Array.isArray(item.options) && item.options.length > 0 && (
+                      <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: '#94a3b8' }}>
+                        Options: {item.options.join(' | ')}
+                      </div>
+                    )}
+                    {item.explanation && (
+                      <div style={{ 
+                        fontSize: '0.9rem', 
+                        whiteSpace: 'pre-wrap', 
+                        color: '#94a3b8',
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        borderRadius: '0.25rem'
+                      }}>
+                        Explanation: {item.explanation}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '16px' }}>
-            <button onClick={() => navigate('/profile')} className="btn btn-primary">
-              👤 View Profile
-            </button>
-            <button onClick={() => {
+        {/* Action Buttons */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '1rem', 
+          justifyContent: 'center', 
+          flexWrap: 'wrap',
+          maxWidth: '800px',
+          margin: '0 auto'
+        }}>
+          <button 
+            onClick={() => navigate('/profile')} 
+            style={{
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              padding: '1rem 2rem',
+              borderRadius: '0.5rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '1rem'
+            }}
+          >
+            👤 View Profile
+          </button>
+          <button 
+            onClick={() => {
               setSelectedQuiz(null);
               setShowFullReview(false);
-            }} className="btn btn-secondary">
-              🔄 Take Another Quiz
-            </button>
-            <button onClick={() => navigate('/leaderboard')} className="btn btn-success">
-              🏆 View Leaderboard
-            </button>
-          </div>
+            }} 
+            style={{
+              background: '#6b7280',
+              color: 'white',
+              border: 'none',
+              padding: '1rem 2rem',
+              borderRadius: '0.5rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '1rem'
+            }}
+          >
+            🔄 Take Another Quiz
+          </button>
+          <button 
+            onClick={() => navigate('/leaderboard')} 
+            style={{
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              padding: '1rem 2rem',
+              borderRadius: '0.5rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '1rem'
+            }}
+          >
+            🏆 View Leaderboard
+          </button>
         </div>
       </div>
     );
@@ -578,10 +863,24 @@ const Quiz = () => {
   const currentQuestion = selectedQuiz.questions[currentQuizIndex];
 
   return (
-    <div className="quiz-wrapper">
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, maxWidth: 1400, margin: '0 auto', padding: '24px', paddingTop: '80px' }}>
+    <div className="quiz-wrapper" style={{ background: '#0f172a', minHeight: '100vh' }}>
+      {/* Hide navigation bar completely */}
+      <style>{`
+        .navbar, nav, .nav, [class*="nav"], [class*="Navbar"] { 
+          display: none !important; 
+          visibility: hidden !important;
+          height: 0 !important;
+          overflow: hidden !important;
+        }
+        body { 
+          padding-top: 0 !important; 
+          margin-top: 0 !important;
+        }
+        .quiz-page { padding-top: 0 !important; }
+      `}</style>
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, maxWidth: 1400, margin: '0 auto', padding: '24px' }}>
         {/* Left Fixed Panel */}
-        <aside style={{ background: 'transparent', color: '#ffffff', position: 'sticky', top: '80px', alignSelf: 'start', height: 'calc(100vh - 128px)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+        <aside style={{ background: 'transparent', color: '#ffffff', position: 'sticky', top: '24px', alignSelf: 'start', height: 'calc(100vh - 48px)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingRight: 16 }}>
             {/* Title */}
             <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, marginBottom: 12 }}>{selectedQuiz.title || 'Quiz'}</div>
@@ -604,13 +903,14 @@ const Quiz = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 12, paddingRight: 8 }}>
               {selectedQuiz.questions.map((q, idx) => {
                 const active = idx === currentQuizIndex;
-                const attempted = !!selectedAnswers[q._id];
-                const bg = active ? '#0ea5e9' : attempted ? '#16a34a' : 'transparent';
-                const border = active ? '#38bdf8' : attempted ? '#14532d' : '#334155';
-                const color = active || attempted ? '#ffffff' : '#cbd5e1';
+                const attempted = !!selectedAnswers[q.id];
+                // Show green for attempted questions, blue only for current unanswered question
+                const bg = attempted ? '#16a34a' : active ? '#0ea5e9' : 'transparent';
+                const border = attempted ? '#14532d' : active ? '#38bdf8' : '#334155';
+                const color = attempted || active ? '#ffffff' : '#cbd5e1';
                 return (
                   <button
-                    key={q._id || idx}
+                    key={q.id || idx}
                     onClick={() => setCurrentQuizIndex(idx)}
                     style={{
                       height: 40,
@@ -651,11 +951,11 @@ const Quiz = () => {
               {/* Options as simple outlined choices (no colored backgrounds) */}
               <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
                 {currentQuestion.options.map((option, index) => {
-                  const isSelected = selectedAnswers[currentQuestion._id] === option;
+                  const isSelected = selectedAnswers[currentQuestion.id] === option;
                   return (
                     <button
                       key={index}
-                      onClick={() => handleAnswerSelect(currentQuestion._id, option)}
+                      onClick={() => handleAnswerSelect(currentQuestion.id, option)}
                       style={{
                         textAlign: 'left', width: '100%',
                         background: '#ffffff',
@@ -681,16 +981,21 @@ const Quiz = () => {
               </div>
             </div>
           {/* Navigation buttons */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+            {/* Left side - Clear button */}
             <button onClick={clearCurrentSelection} style={{ border: '1px solid #e5e7eb', background: '#ffffff', color: '#111827', borderRadius: 10, padding: '10px 16px', fontWeight: 700, minWidth: 92 }}>Clear</button>
-            <button onClick={handleSkip} style={{ border: '1px solid #e5e7eb', background: '#ffffff', color: '#111827', borderRadius: 10, padding: '10px 16px', fontWeight: 700, minWidth: 92 }}>Skip</button>
-            <button
-              onClick={currentQuizIndex === selectedQuiz.questions.length - 1 ? handleSubmit : handleNext}
-              disabled={currentQuizIndex === selectedQuiz.questions.length - 1 ? (submitting || !selectedAnswers[currentQuestion._id]) : !selectedAnswers[currentQuestion._id]}
-              style={{ border: '1px solid #f59e0b', background: '#f59e0b', color: '#ffffff', borderRadius: 10, padding: '10px 16px', fontWeight: 800, minWidth: 92 }}
-            >
-              {currentQuizIndex === selectedQuiz.questions.length - 1 ? (submitting ? 'Submitting…' : 'Submit') : 'Submit'}
-            </button>
+            
+            {/* Right side - Skip and Next buttons */}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={handleSkip} style={{ border: '1px solid #e5e7eb', background: '#ffffff', color: '#111827', borderRadius: 10, padding: '10px 16px', fontWeight: 700, minWidth: 92 }}>Skip</button>
+              <button
+                onClick={currentQuizIndex === selectedQuiz.questions.length - 1 ? handleSubmit : handleNext}
+                disabled={currentQuizIndex === selectedQuiz.questions.length - 1 ? (submitting || !selectedAnswers[currentQuestion.id]) : !selectedAnswers[currentQuestion.id]}
+                style={{ border: '1px solid #f59e0b', background: '#f59e0b', color: '#ffffff', borderRadius: 10, padding: '10px 16px', fontWeight: 800, minWidth: 92 }}
+              >
+                {currentQuizIndex === selectedQuiz.questions.length - 1 ? (submitting ? 'Submitting…' : 'Submit') : 'Next'}
+              </button>
+            </div>
           </div>
           </div>
         </div>
@@ -699,4 +1004,4 @@ const Quiz = () => {
   );
 };
 
-export default Quiz;
+export default memo(Quiz);

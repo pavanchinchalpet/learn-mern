@@ -1,12 +1,16 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const http = require('http');
 const socketIo = require('socket.io');
 
-// Load environment variables
+// Load environment variables FIRST
 dotenv.config();
+
+// Import Supabase
+const supabase = require('./config/supabase');
+const { cleanupExpiredOTPs } = require('./controllers/supabaseAuthController');
 
 const app = express();
 const server = http.createServer(app);
@@ -18,14 +22,16 @@ const io = socketIo(server, {
 });
 
 // Middleware
-app.use(cors());
+const clientOrigin = process.env.CLIENT_URL || "http://localhost:3000";
+app.use(cors({ origin: clientOrigin, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mern-quest')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Supabase connection test
+supabase.from('users').select('count').limit(1)
+  .then(() => console.log('Connected to Supabase'))
+  .catch(err => console.error('Supabase connection error:', err));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -61,3 +67,8 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Cleanup expired OTPs every 5 minutes
+setInterval(() => {
+  cleanupExpiredOTPs();
+}, 5 * 60 * 1000); // 5 minutes

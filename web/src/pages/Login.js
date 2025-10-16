@@ -23,15 +23,22 @@ const Login = () => {
     });
   };
 
+
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
+    console.log('🔵 [FRONTEND LOGIN] Starting password login for:', formData.email);
     setLoading(true);
     setError(null);
 
+    console.log('🔵 [FRONTEND LOGIN] Attempting login...');
     const result = await login(formData.email, formData.password);
+    console.log('🔵 [FRONTEND LOGIN] Login result:', result);
     
     if (result.success) {
-      navigate('/');
+      console.log('✅ [FRONTEND LOGIN] Login successful, navigating to home');
+      navigate('/home');
+    } else {
+      console.log('🔴 [FRONTEND LOGIN] Login failed:', result.error);
     }
     
     setLoading(false);
@@ -69,7 +76,7 @@ const Login = () => {
     const result = await verifyOTP(formData.email, formData.otp);
     
     if (result.success) {
-      navigate('/');
+      navigate('/home');
     }
     
     setLoading(false);
@@ -249,12 +256,12 @@ const Login = () => {
                     {loading ? (
                       <>
                         <div className="loading-spinner"></div>
-                        Sending Code...
+                        Sending OTP...
                       </>
                     ) : (
                       <>
                         <span>📧</span>
-                        Send Verification Code
+                        Send OTP
                       </>
                     )}
                   </button>
@@ -263,11 +270,11 @@ const Login = () => {
                 <form onSubmit={handleOTPVerification} className="login-form">
                   <div className="success-message">
                     <span>📧</span>
-                    <span>Verification code sent to <strong>{formData.email}</strong></span>
+                    <span>OTP sent to <strong>{formData.email}</strong></span>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Enter 6-digit Verification Code</label>
+                    <label className="form-label">Enter 6-digit OTP</label>
                     <input
                       type="text"
                       name="otp"
@@ -299,7 +306,7 @@ const Login = () => {
                     ) : (
                       <>
                         <span>✅</span>
-                        Verify Code
+                        Verify OTP
                       </>
                     )}
                   </button>
@@ -327,7 +334,7 @@ const Login = () => {
                       ) : (
                         <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
                           <span>🔄</span>
-                          Resend Code
+                          Resend OTP
                         </span>
                       )}
                     </button>

@@ -38,9 +38,11 @@ const Register = () => {
       return;
     }
 
+    // Register user directly - backend will handle duplicate checking
     const result = await register(formData.username, formData.email, formData.password);
     
     if (result.success) {
+      console.log('✅ [REGISTER] Registration successful, navigating to home');
       navigate('/home');
     }
     

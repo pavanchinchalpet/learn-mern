@@ -1,9 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { adminAuth } = require('../middleware/auth');
-const Quiz = require('../models/Quiz');
-const User = require('../models/User');
-const Score = require('../models/Score');
+const supabase = require('../config/supabase');
 
 const router = express.Router();
 
@@ -14,22 +12,30 @@ router.post('/quiz', adminAuth, [
   body('question').notEmpty().withMessage('Question is required'),
   body('options').isArray({ min: 2 }).withMessage('At least 2 options are required'),
   body('answer').notEmpty().withMessage('Answer is required'),
-  body('category').isIn(['MongoDB', 'Express', 'React', 'Node']).withMessage('Invalid category'),
-  body('difficulty').isIn(['easy', 'medium', 'hard']).withMessage('Invalid difficulty')
+  body('category').isIn(['JavaScript', 'Node.js', 'MongoDB', 'Express', 'React', 'MERN', 'Authentication', 'Performance', 'Deployment']).withMessage('Invalid category'),
+  body('difficulty').isIn(['beginner', 'intermediate', 'advanced']).withMessage('Invalid difficulty')
 ], async (req, res) => {
   try {
-    const { question, options, answer, category, difficulty, explanation } = req.body;
+    const { question, options, answer, category, difficulty, explanation, points = 10 } = req.body;
     
-    const quiz = new Quiz({
-      question,
-      options,
-      answer,
-      category,
-      difficulty,
-      explanation
-    });
+    const { data: quiz, error } = await supabase
+      .from('quizzes')
+      .insert({
+        question,
+        options,
+        answer,
+        category,
+        difficulty,
+        explanation,
+        points
+      })
+      .select()
+      .single();
     
-    await quiz.save();
+    if (error) {
+      console.error('Create quiz error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
     
     res.status(201).json({
       message: 'Quiz created successfully',
@@ -46,22 +52,33 @@ router.post('/quiz', adminAuth, [
 // @access  Admin
 router.put('/quiz/:id', adminAuth, async (req, res) => {
   try {
-    const { question, options, answer, category, difficulty, explanation, isActive } = req.body;
+    const { question, options, answer, category, difficulty, explanation, is_active, points } = req.body;
     
-    const quiz = await Quiz.findById(req.params.id);
+    const updates = {};
+    if (question) updates.question = question;
+    if (options) updates.options = options;
+    if (answer) updates.answer = answer;
+    if (category) updates.category = category;
+    if (difficulty) updates.difficulty = difficulty;
+    if (explanation !== undefined) updates.explanation = explanation;
+    if (is_active !== undefined) updates.is_active = is_active;
+    if (points !== undefined) updates.points = points;
+    
+    const { data: quiz, error } = await supabase
+      .from('quizzes')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Update quiz error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+    
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
-    
-    if (question) quiz.question = question;
-    if (options) quiz.options = options;
-    if (answer) quiz.answer = answer;
-    if (category) quiz.category = category;
-    if (difficulty) quiz.difficulty = difficulty;
-    if (explanation !== undefined) quiz.explanation = explanation;
-    if (isActive !== undefined) quiz.isActive = isActive;
-    
-    await quiz.save();
     
     res.json({
       message: 'Quiz updated successfully',
@@ -78,12 +95,15 @@ router.put('/quiz/:id', adminAuth, async (req, res) => {
 // @access  Admin
 router.delete('/quiz/:id', adminAuth, async (req, res) => {
   try {
-    const quiz = await Quiz.findById(req.params.id);
-    if (!quiz) {
-      return res.status(404).json({ message: 'Quiz not found' });
-    }
+    const { error } = await supabase
+      .from('quizzes')
+      .delete()
+      .eq('id', req.params.id);
     
-    await quiz.remove();
+    if (error) {
+      console.error('Delete quiz error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
     
     res.json({ message: 'Quiz deleted successfully' });
   } catch (error) {
@@ -97,47 +117,72 @@ router.delete('/quiz/:id', adminAuth, async (req, res) => {
 // @access  Admin
 router.get('/analytics', adminAuth, async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalQuizzes = await Quiz.countDocuments();
-    const totalScores = await Score.countDocuments();
-    
-    const userStats = await User.aggregate([
-      {
-        $group: {
-          _id: null,
-          avgPoints: { $avg: '$points' },
-          avgLevel: { $avg: '$level' },
-          totalBadges: { $sum: { $size: '$badges' } }
-        }
-      }
+    // Get counts
+    const [usersResult, quizzesResult, scoresResult] = await Promise.all([
+      supabase.from('users').select('*', { count: 'exact' }),
+      supabase.from('quizzes').select('*', { count: 'exact' }),
+      supabase.from('quiz_scores').select('*', { count: 'exact' })
     ]);
     
-    const quizStats = await Quiz.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-          avgSuccessRate: { $avg: { $divide: ['$timesCorrect', { $max: ['$timesAnswered', 1] }] } }
-        }
-      }
-    ]);
+    const totalUsers = usersResult.count || 0;
+    const totalQuizzes = quizzesResult.count || 0;
+    const totalScores = scoresResult.count || 0;
     
-    const recentActivity = await Score.find()
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate('userId', 'username')
-      .populate('quizId', 'category difficulty');
+    // Get user stats
+    const { data: userStats } = await supabase
+      .from('users')
+      .select('points, level');
+    
+    const avgPoints = userStats?.length ? userStats.reduce((sum, user) => sum + user.points, 0) / userStats.length : 0;
+    const avgLevel = userStats?.length ? userStats.reduce((sum, user) => sum + user.level, 0) / userStats.length : 1;
+    
+    // Get quiz stats by category
+    const { data: quizStats } = await supabase
+      .from('quizzes')
+      .select('category, times_answered, times_correct');
+    
+    const categoryStats = {};
+    quizStats?.forEach(quiz => {
+      if (!categoryStats[quiz.category]) {
+        categoryStats[quiz.category] = { count: 0, totalAnswered: 0, totalCorrect: 0 };
+      }
+      categoryStats[quiz.category].count++;
+      categoryStats[quiz.category].totalAnswered += quiz.times_answered || 0;
+      categoryStats[quiz.category].totalCorrect += quiz.times_correct || 0;
+    });
+    
+    // Get recent activity
+    const { data: recentActivity } = await supabase
+      .from('quiz_scores')
+      .select(`
+        *,
+        users!inner(username),
+        quizzes!inner(category, difficulty)
+      `)
+      .order('attempted_at', { ascending: false })
+      .limit(10);
     
     res.json({
       overview: {
         totalUsers,
         totalQuizzes,
         totalScores,
-        avgPoints: userStats[0]?.avgPoints || 0,
-        avgLevel: userStats[0]?.avgLevel || 1
+        avgPoints: Math.round(avgPoints),
+        avgLevel: Math.round(avgLevel)
       },
-      quizStats,
-      recentActivity
+      quizStats: Object.entries(categoryStats).map(([category, stats]) => ({
+        category,
+        count: stats.count,
+        avgSuccessRate: stats.totalAnswered > 0 ? stats.totalCorrect / stats.totalAnswered : 0
+      })),
+      recentActivity: recentActivity?.map(activity => ({
+        id: activity.id,
+        score: activity.score,
+        attemptedAt: activity.attempted_at,
+        username: activity.users?.username,
+        category: activity.quizzes?.category,
+        difficulty: activity.quizzes?.difficulty
+      })) || []
     });
   } catch (error) {
     console.error('Get analytics error:', error);
@@ -151,19 +196,23 @@ router.get('/analytics', adminAuth, async (req, res) => {
 router.get('/users', adminAuth, async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
     
-    const users = await User.find()
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    const { data: users, count, error } = await supabase
+      .from('users')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
     
-    const total = await User.countDocuments();
+    if (error) {
+      console.error('Get users error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
     
     res.json({
-      users,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page
+      users: users || [],
+      totalPages: Math.ceil((count || 0) / limit),
+      currentPage: parseInt(page)
     });
   } catch (error) {
     console.error('Get users error:', error);

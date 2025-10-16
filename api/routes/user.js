@@ -6,7 +6,7 @@ const {
   getLeaderboard, 
   getUserStats, 
   getUserAchievements 
-} = require('../controllers/userController');
+} = require('../controllers/supabaseUserController');
 
 const router = express.Router();
 
