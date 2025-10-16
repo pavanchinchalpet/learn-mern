@@ -126,11 +126,18 @@ const Profile = () => {
               </div>
             </div>
             <div className="profile-progress" style={{ textAlign: 'center' }}>
-              <div className="progress-text" style={{ color: '#f8fafc' }}>12/20</div>
+              <div className="progress-text" style={{ color: '#f8fafc' }}>{user.totalQuizzes || 0}/20</div>
               <div className="progress-label" style={{ color: '#94a3b8' }}>Quests Completed</div>
               <div className="progress-bar" style={{ background: '#1f2937' }}>
-                <div className="progress-fill" style={{ width: '60%', background: '#4f46e5' }}></div>
+                <div className="progress-fill" style={{ width: `${Math.min(((user.totalQuizzes || 0) / 20) * 100, 100)}%`, background: '#4f46e5' }}></div>
               </div>
+              <button 
+                onClick={() => setEditing(!editing)} 
+                className="btn btn-primary mt-2"
+                style={{ marginTop: '1rem', padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+              >
+                {editing ? '❌ Cancel' : '✏️ Edit Profile'}
+              </button>
             </div>
           </div>
         </div>

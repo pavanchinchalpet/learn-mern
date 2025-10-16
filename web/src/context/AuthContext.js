@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '../utils/api';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { db } from '../config/supabase';
 
 const AuthContext = createContext();
 
@@ -16,186 +16,346 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Mock user for development - bypass authentication
-  const mockUser = {
-    id: 'dev-user-1',
-    username: 'Pavan',
-    email: 'pavan@example.com',
-    points: 1250,
-    level: 3,
-    streak: 5,
-    isAdmin: true, // Set to true for development to access admin routes
-    avatar: 'default'
-  };
-
   useEffect(() => {
-    // For development: Set mock user immediately
-    setUser(mockUser);
-    setLoading(false);
-    
-    // Original authentication logic (commented out for development)
-    /*
-    const token = localStorage.getItem('token');
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      loadUser();
-    } else {
-      setLoading(false);
-    }
-    */
+    // Check if user is logged in via our custom JWT system
+    const checkAuthStatus = async () => {
+      try {
+        // Check if we have a token first (from localStorage or cookies)
+        const token = localStorage.getItem('token');
+        const hasCookie = document.cookie.includes('token=');
+        
+        if (!token && !hasCookie) {
+          // No token found, skip API call
+          if (process.env.NODE_ENV === 'development') {
+            console.log('ℹ️ [AUTH CONTEXT] No token found, skipping auth check');
+          }
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        // Only log in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔵 [AUTH CONTEXT] Checking authentication status...');
+        }
+        
+        // Try to get user profile from our backend - use the correct endpoint
+        const response = await fetch('http://localhost:5000/api/auth/profile', {
+          method: 'GET',
+          credentials: 'include', // Include cookies
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ [AUTH CONTEXT] User authenticated:', data.user?.username);
+          }
+          setUser(data.user);
+        } else if (response.status === 401) {
+          // 401 is expected when user is not logged in - this is normal behavior
+          if (process.env.NODE_ENV === 'development') {
+            console.log('ℹ️ [AUTH CONTEXT] No active session found');
+          }
+          // Clear any invalid tokens from localStorage
+          localStorage.removeItem('token');
+          setUser(null);
+        } else {
+          console.log('🔴 [AUTH CONTEXT] Unexpected auth error:', response.status);
+          // Clear any invalid tokens from localStorage
+          localStorage.removeItem('token');
+          setUser(null);
+        }
+      } catch (error) {
+        console.log('🔴 [AUTH CONTEXT] Auth check error:', error);
+        // Clear any invalid tokens from localStorage
+        localStorage.removeItem('token');
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthStatus();
   }, []);
 
-  const loadUser = async () => {
+
+  const checkUserExists = useCallback(async (email) => {
     try {
-      const response = await api.get('/api/auth/profile');
-      setUser(response.data.user);
+      console.log('🔵 [AUTH CONTEXT] Checking if user exists:', email);
+      
+      // Use our backend API to check if user exists
+      const response = await fetch('http://localhost:5000/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email })
+      });
+
+      console.log('🔵 [AUTH CONTEXT] Check user exists response status:', response.status);
+      
+      const data = await response.json();
+      console.log('🔵 [AUTH CONTEXT] Check user exists response data:', data);
+      
+      if (response.status === 404) {
+        console.log('🔴 [AUTH CONTEXT] User not found');
+        return { exists: false, user: null };
+      }
+      
+      if (response.ok) {
+        console.log('✅ [AUTH CONTEXT] User exists');
+        return { exists: true, user: { email } };
+      }
+      
+      // If we get here, there was an error but user might exist
+      return { exists: false, user: null };
     } catch (error) {
-      console.error('Load user error:', error);
-      localStorage.removeItem('token');
-      delete api.defaults.headers.common['Authorization'];
+      console.log('🔴 [AUTH CONTEXT] Error checking user existence:', error.message);
+      return { exists: false, user: null };
+    }
+  }, []);
+
+  const login = useCallback(async (email, password) => {
+    try {
+      console.log('🔵 [AUTH CONTEXT] Starting login for:', email);
+      setError(null);
+      setLoading(true);
+      
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify({ email, password })
+      });
+
+      console.log('🔵 [AUTH CONTEXT] Login response status:', response.status);
+      
+      const data = await response.json();
+      console.log('🔵 [AUTH CONTEXT] Login response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+      
+      if (data.user) {
+        console.log('✅ [AUTH CONTEXT] Login successful, setting user:', data.user.username);
+        setUser(data.user);
+        
+        // Store token in localStorage for persistence across page refreshes
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        
+        // Show email confirmation notice if needed
+        if (data.requiresEmailConfirmation) {
+          console.log('📧 [AUTH CONTEXT] Email confirmation required');
+        }
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.log('🔴 [AUTH CONTEXT] Login error:', error.message);
+      let message = 'Login failed';
+      
+      if (error.message) {
+        message = error.message;
+      }
+      
+      setError(message);
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const login = async (email, password) => {
+  const register = useCallback(async (username, email, password) => {
     try {
+      console.log('🔵 [AUTH CONTEXT] Starting registration for:', email);
       setError(null);
+      setLoading(true);
       
-      // For development: Always return success with mock user
-      setUser(mockUser);
-      return { success: true };
-      
-      // Original login logic (commented out for development)
-      /*
-      const response = await api.post('/api/auth/login', { email, password });
-      const { session, user } = response.data;
-      const accessToken = session?.access_token;
-
-      if (accessToken) {
-        localStorage.setItem('token', accessToken);
-        api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      }
-      setUser(user);
-      
-      return { success: true };
-      */
-    } catch (error) {
-      let message = 'Login failed';
-      
-      if (error.response?.data?.errors) {
-        // Handle validation errors
-        const validationErrors = error.response.data.errors;
-        message = validationErrors.map(err => err.msg).join(', ');
-      } else if (error.response?.data?.message) {
-        message = error.response.data.message;
-      }
-      
-      setError(message);
-      return { success: false, error: message };
-    }
-  };
-
-  const sendOTP = async (email) => {
-    try {
-      setError(null);
-      const response = await api.post('/api/auth/send-otp', { email });
-      
-      return { success: true, message: response.data.message };
-    } catch (error) {
-      let message = 'Failed to send OTP';
-      
-      if (error.response?.data?.errors) {
-        // Handle validation errors
-        const validationErrors = error.response.data.errors;
-        message = validationErrors.map(err => err.msg).join(', ');
-      } else if (error.response?.data?.message) {
-        message = error.response.data.message;
-      }
-      
-      setError(message);
-      return { success: false, error: message };
-    }
-  };
-
-  const verifyOTP = async (email, otp) => {
-    try {
-      setError(null);
-      const response = await api.post('/api/auth/verify-otp', { email, token: otp });
-      const { session, user } = response.data;
-      const accessToken = session?.access_token;
-      if (accessToken) {
-        localStorage.setItem('token', accessToken);
-        api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      }
-      setUser(user);
-      
-      return { success: true };
-    } catch (error) {
-      let message = 'OTP verification failed';
-      
-      if (error.response?.data?.errors) {
-        // Handle validation errors
-        const validationErrors = error.response.data.errors;
-        message = validationErrors.map(err => err.msg).join(', ');
-      } else if (error.response?.data?.message) {
-        message = error.response.data.message;
-      }
-      
-      setError(message);
-      return { success: false, error: message };
-    }
-  };
-
-  const register = async (username, email, password) => {
-    try {
-      setError(null);
-      
-      // For development: Always return success with mock user
-      const newMockUser = { ...mockUser, username, email };
-      setUser(newMockUser);
-      return { success: true };
-      
-      // Original registration logic (commented out for development)
-      /*
-      const response = await api.post('/api/auth/register', { 
-        username, 
-        email, 
-        password 
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify({ username, email, password })
       });
-      const { user } = response.data;
-      setUser(user);
+
+      console.log('🔵 [AUTH CONTEXT] Register response status:', response.status);
       
-      return { success: true };
-      */
+      const data = await response.json();
+      console.log('🔵 [AUTH CONTEXT] Register response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
+      }
+      
+      if (data.user) {
+        console.log('✅ [AUTH CONTEXT] Registration successful, setting user:', data.user.username);
+        setUser(data.user);
+        
+        // Store token in localStorage for persistence across page refreshes
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        
+        // Show email confirmation notice if needed
+        if (data.requiresEmailConfirmation) {
+          console.log('📧 [AUTH CONTEXT] Email confirmation required');
+        }
+      }
+      
+      return { success: true, message: data.message || 'Registration successful!' };
     } catch (error) {
+      console.log('🔴 [AUTH CONTEXT] Registration error:', error.message);
       let message = 'Registration failed';
       
-      if (error.response?.data?.errors) {
-        // Handle validation errors
-        const validationErrors = error.response.data.errors;
-        message = validationErrors.map(err => err.msg).join(', ');
-      } else if (error.response?.data?.message) {
-        message = error.response.data.message;
+      if (error.message) {
+        message = error.message;
+      }
+      
+      setError(message);
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const sendOTP = useCallback(async (email) => {
+    try {
+      console.log('🔵 [AUTH CONTEXT] Sending OTP for:', email);
+      setError(null);
+      
+      const response = await fetch('http://localhost:5000/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email })
+      });
+
+      console.log('🔵 [AUTH CONTEXT] Send OTP response status:', response.status);
+      
+      const data = await response.json();
+      console.log('🔵 [AUTH CONTEXT] Send OTP response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send OTP');
+      }
+      
+      return { success: true, message: data.message || 'OTP sent successfully' };
+    } catch (error) {
+      console.log('🔴 [AUTH CONTEXT] Send OTP error:', error.message);
+      let message = 'Failed to send OTP';
+      
+      if (error.message) {
+        message = error.message;
       }
       
       setError(message);
       return { success: false, error: message };
     }
-  };
+  }, []);
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    delete api.defaults.headers.common['Authorization'];
-    setUser(null);
-    setError(null);
-  };
+  const verifyOTP = useCallback(async (email, otp) => {
+    try {
+      console.log('🔵 [AUTH CONTEXT] Verifying OTP for:', email);
+      setError(null);
+      
+      const response = await fetch('http://localhost:5000/api/auth/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, otp })
+      });
 
-  const updateUser = (updatedUser) => {
-    setUser(updatedUser);
-  };
+      console.log('🔵 [AUTH CONTEXT] Verify OTP response status:', response.status);
+      
+      const data = await response.json();
+      console.log('🔵 [AUTH CONTEXT] Verify OTP response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'OTP verification failed');
+      }
+      
+      if (data.user) {
+        console.log('✅ [AUTH CONTEXT] OTP verification successful, setting user:', data.user.username);
+        setUser(data.user);
+        
+        // Store token in localStorage for persistence across page refreshes
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+      }
+      
+      return { success: true, message: data.message || 'OTP verified successfully' };
+    } catch (error) {
+      console.log('🔴 [AUTH CONTEXT] Verify OTP error:', error.message);
+      let message = 'OTP verification failed';
+      
+      if (error.message) {
+        message = error.message;
+      }
+      
+      setError(message);
+      return { success: false, error: message };
+    }
+  }, []);
 
-  const value = {
+  const logout = useCallback(async () => {
+    try {
+      console.log('🔵 [AUTH CONTEXT] Logging out...');
+      
+      const response = await fetch('http://localhost:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      console.log('🔵 [AUTH CONTEXT] Logout response status:', response.status);
+      // Clear local state regardless of HTTP status to avoid UX noise
+      console.log('✅ [AUTH CONTEXT] Clearing local session');
+      setUser(null);
+      setError(null);
+      // Clear token from localStorage
+      localStorage.removeItem('token');
+    } catch (error) {
+      console.log('🔴 [AUTH CONTEXT] Logout error:', error.message);
+      // Even if logout fails on backend, clear local state
+      setUser(null);
+      setError(null);
+      // Clear token from localStorage
+      localStorage.removeItem('token');
+    }
+  }, []);
+
+  const updateUser = useCallback(async (updates) => {
+    try {
+      if (!user) return;
+      
+      const { data, error } = await db.updateUserProfile(user.id, updates);
+      
+      if (error) throw error;
+      
+      setUser(data);
+    } catch (error) {
+      console.error('Update user error:', error);
+      setError('Failed to update profile');
+    }
+  }, [user]);
+
+  const value = useMemo(() => ({
     user,
     loading,
     error,
@@ -205,8 +365,9 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     setError,
     sendOTP,
-    verifyOTP
-  };
+    verifyOTP,
+    checkUserExists
+  }), [user, loading, error, login, register, logout, updateUser, sendOTP, verifyOTP, checkUserExists]);
 
   return (
     <AuthContext.Provider value={value}>

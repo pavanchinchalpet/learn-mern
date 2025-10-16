@@ -25,18 +25,7 @@ const Home = () => {
     { id: 3, title: 'Knowledge Seeker', icon: '📚', unlocked: false },
   ];
 
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case 'Easy':
-        return 'badge-success';
-      case 'Medium':
-        return 'badge-default';
-      case 'Hard':
-        return 'badge-error';
-      default:
-        return 'badge-default';
-    }
-  };
+  // Removed unused getDifficultyColor function
 
   return (
     <div style={{ 

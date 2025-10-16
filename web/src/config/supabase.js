@@ -88,12 +88,12 @@ export const db = {
     return { data, error };
   },
 
-  // Get courses
-  getCourses: async (filters = {}) => {
+  // Get quizzes
+  getQuizzes: async (filters = {}) => {
     let query = supabase
-      .from('courses')
+      .from('quizzes')
       .select('*')
-      .eq('is_published', true);
+      .eq('is_active', true);
 
     if (filters.category) {
       query = query.eq('category', filters.category);
@@ -101,82 +101,63 @@ export const db = {
     if (filters.difficulty) {
       query = query.eq('difficulty', filters.difficulty);
     }
-    if (filters.search) {
-      query = query.ilike('title', `%${filters.search}%`);
+    if (filters.limit) {
+      query = query.limit(filters.limit);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.order('created_at', { ascending: true });
     return { data, error };
   },
 
-  // Get course by ID
-  getCourseById: async (courseId) => {
+  // Get quiz categories
+  getQuizCategories: async () => {
     const { data, error } = await supabase
-      .from('courses')
+      .from('quiz_categories')
       .select('*')
-      .eq('id', courseId)
-      .single();
+      .order('name');
     return { data, error };
   },
 
-  // Enroll in course
-  enrollInCourse: async (userId, courseId) => {
+  // Submit quiz score
+  submitQuizScore: async (scoreData) => {
     const { data, error } = await supabase
-      .from('user_enrollments')
-      .insert({
-        user_id: userId,
-        course_id: courseId
-      })
+      .from('quiz_scores')
+      .insert(scoreData)
       .select()
       .single();
     return { data, error };
   },
 
-  // Get user enrollments
-  getUserEnrollments: async (userId) => {
+  // Get user quiz scores
+  getUserQuizScores: async (userId) => {
     const { data, error } = await supabase
-      .from('user_enrollments')
+      .from('quiz_scores')
+      .select('*')
+      .eq('user_id', userId)
+      .order('attempted_at', { ascending: false });
+    return { data, error };
+  },
+
+  // Get leaderboard
+  getLeaderboard: async (limit = 10) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('username, points, level, streak, total_quizzes, correct_answers, total_answers')
+      .order('points', { ascending: false })
+      .limit(limit);
+    return { data, error };
+  },
+
+  // Get user badges
+  getUserBadges: async (userId) => {
+    const { data, error } = await supabase
+      .from('user_badges')
       .select(`
         *,
-        courses (*)
+        badges (*)
       `)
-      .eq('user_id', userId);
-    return { data, error };
-  },
-
-  // Get lessons for a course
-  getLessonsByCourse: async (courseId) => {
-    const { data, error } = await supabase
-      .from('lessons')
-      .select('*')
-      .eq('course_id', courseId)
-      .eq('is_published', true)
-      .order('order_index');
-    return { data, error };
-  },
-
-  // Update progress
-  updateProgress: async (progressData) => {
-    const { data, error } = await supabase
-      .from('progress')
-      .upsert(progressData)
-      .select()
-      .single();
-    return { data, error };
-  },
-
-  // Get user progress
-  getUserProgress: async (userId, courseId = null) => {
-    let query = supabase
-      .from('progress')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (courseId) {
-      query = query.eq('course_id', courseId);
-    }
-
-    const { data, error } = await query;
+      .eq('user_id', userId)
+      .order('earned_at', { ascending: false });
     return { data, error };
   }
 };

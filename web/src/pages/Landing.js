@@ -1,8 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Landing.css';
 
 const Landing = () => {
+  // Defer non-critical content to improve LCP
+  const [deferBelowFold, setDeferBelowFold] = useState(false);
+  const [deferHeroVisual, setDeferHeroVisual] = useState(false);
+
+  useEffect(() => {
+    // Schedule below-the-fold sections after first paint
+    const schedule = () => {
+      setDeferHeroVisual(true);
+      // Defer heavier sections a bit later
+      setTimeout(() => setDeferBelowFold(true), 200);
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(schedule, { timeout: 500 });
+    } else {
+      setTimeout(schedule, 0);
+    }
+  }, []);
+
   return (
     <div className="landing-page">
       {/* Navigation */}
@@ -56,60 +74,63 @@ const Landing = () => {
               </div>
             </div>
           </div>
-          <div className="hero-visual">
-            <div className="code-preview">
-              <div className="code-header">
-                <div className="code-dots">
-                  <span className="dot red"></span>
-                  <span className="dot yellow"></span>
-                  <span className="dot green"></span>
+          {deferHeroVisual && (
+            <div className="hero-visual">
+              <div className="code-preview">
+                <div className="code-header">
+                  <div className="code-dots">
+                    <span className="dot red"></span>
+                    <span className="dot yellow"></span>
+                    <span className="dot green"></span>
+                  </div>
+                  <span className="code-title">app.js</span>
                 </div>
-                <span className="code-title">app.js</span>
-              </div>
-              <div className="code-content">
-                <div className="code-line">
-                  <span className="code-keyword">const</span> 
-                  <span className="code-variable"> express</span> 
-                  <span className="code-operator"> =</span> 
-                  <span className="code-function"> require</span>
-                  <span className="code-bracket">(</span>
-                  <span className="code-string">'express'</span>
-                  <span className="code-bracket">)</span>
-                </div>
-                <div className="code-line">
-                  <span className="code-keyword">const</span> 
-                  <span className="code-variable"> app</span> 
-                  <span className="code-operator"> =</span> 
-                  <span className="code-function"> express</span>
-                  <span className="code-bracket">()</span>
-                </div>
-                <div className="code-line">
-                  <span className="code-keyword">const</span> 
-                  <span className="code-variable"> mongoose</span> 
-                  <span className="code-operator"> =</span> 
-                  <span className="code-function"> require</span>
-                  <span className="code-bracket">(</span>
-                  <span className="code-string">'mongoose'</span>
-                  <span className="code-bracket">)</span>
-                </div>
-                <div className="code-line">
-                  <span className="code-comment">{'// Connect to MongoDB'}</span>
-                </div>
-                <div className="code-line">
-                  <span className="code-function">mongoose</span>
-                  <span className="code-bracket">.</span>
-                  <span className="code-function">connect</span>
-                  <span className="code-bracket">(</span>
-                  <span className="code-string">process.env.MONGODB_URI</span>
-                  <span className="code-bracket">)</span>
+                <div className="code-content">
+                  <div className="code-line">
+                    <span className="code-keyword">const</span> 
+                    <span className="code-variable"> express</span> 
+                    <span className="code-operator"> =</span> 
+                    <span className="code-function"> require</span>
+                    <span className="code-bracket">(</span>
+                    <span className="code-string">'express'</span>
+                    <span className="code-bracket">)</span>
+                  </div>
+                  <div className="code-line">
+                    <span className="code-keyword">const</span> 
+                    <span className="code-variable"> app</span> 
+                    <span className="code-operator"> =</span> 
+                    <span className="code-function"> express</span>
+                    <span className="code-bracket">()</span>
+                  </div>
+                  <div className="code-line">
+                    <span className="code-keyword">const</span> 
+                    <span className="code-variable"> mongoose</span> 
+                    <span className="code-operator"> =</span> 
+                    <span className="code-function"> require</span>
+                    <span className="code-bracket">(</span>
+                    <span className="code-string">'mongoose'</span>
+                    <span className="code-bracket">)</span>
+                  </div>
+                  <div className="code-line">
+                    <span className="code-comment">{'// Connect to MongoDB'}</span>
+                  </div>
+                  <div className="code-line">
+                    <span className="code-function">mongoose</span>
+                    <span className="code-bracket">.</span>
+                    <span className="code-function">connect</span>
+                    <span className="code-bracket">(</span>
+                    <span className="code-string">process.env.MONGODB_URI</span>
+                    <span className="code-bracket">)</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
       {/* Features Section */}
+      {deferBelowFold && (
       <section className="features-section">
         <div className="features-container">
           <div className="section-header">
@@ -164,8 +185,10 @@ const Landing = () => {
           </div>
         </div>
       </section>
+      )}
 
       {/* Learning Path Section */}
+      {deferBelowFold && (
       <section className="learning-path-section">
         <div className="learning-path-container">
           <div className="section-header">
@@ -214,8 +237,10 @@ const Landing = () => {
           </div>
         </div>
       </section>
+      )}
 
       {/* CTA Section */}
+      {deferBelowFold && (
       <section className="cta-section">
         <div className="cta-container">
           <div className="cta-content">
@@ -252,8 +277,10 @@ const Landing = () => {
           </div>
         </div>
       </section>
+      )}
 
       {/* Footer */}
+      {deferBelowFold && (
       <footer className="landing-footer">
         <div className="footer-container">
           <div className="footer-brand">
@@ -270,6 +297,7 @@ const Landing = () => {
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 };

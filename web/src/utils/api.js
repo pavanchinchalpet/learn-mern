@@ -1,14 +1,18 @@
 import axios from 'axios';
 
+// Simple cache implementation
+const cache = new Map();
+
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token (do NOT short-circuit with cached responses here)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -17,14 +21,18 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle errors
+// Response interceptor to handle errors and cache responses
 api.interceptors.response.use(
   (response) => {
+    // Cache successful GET responses (compute cache key here)
+    const { method = 'get', url = '', params } = response.config || {};
+    if (method.toLowerCase() === 'get' && url) {
+      const cacheKey = `${url}${JSON.stringify(params || {})}`;
+      cache.set(cacheKey, { data: response, timestamp: Date.now() });
+    }
     return response;
   },
   (error) => {
@@ -61,5 +69,18 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Cache management utilities
+export const clearCache = () => {
+  cache.clear();
+};
+
+export const clearCacheForUrl = (urlPattern) => {
+  for (const [key] of cache) {
+    if (key.includes(urlPattern)) {
+      cache.delete(key);
+    }
+  }
+};
 
 export default api;
