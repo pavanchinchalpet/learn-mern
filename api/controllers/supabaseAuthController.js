@@ -670,6 +670,55 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+// @desc    Refresh access token
+// @route   POST /api/auth/refresh
+// @access  Public
+const refresh = async (req, res) => {
+  try {
+    console.log('🔵 [REFRESH] Refresh request received');
+    
+    // For JWT-based auth, we don't actually refresh tokens
+    // Instead, we validate the current token and return user info
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      console.log('🔴 [REFRESH] No token provided');
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      console.log('✅ [REFRESH] Token is valid, user ID:', decoded.userId);
+      
+      // Get user data
+      const { data: user } = await userHelpers.getUserById(decoded.userId);
+      if (!user) {
+        console.log('🔴 [REFRESH] User not found');
+        return res.status(401).json({ message: 'User not found' });
+      }
+
+      console.log('✅ [REFRESH] Refresh successful for user:', user.username);
+      res.json({
+        message: 'Token refreshed successfully',
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          points: user.points || 0,
+          level: user.level || 1,
+          achievements: user.achievements || []
+        }
+      });
+    } catch (tokenError) {
+      console.log('🔴 [REFRESH] Token verification failed:', tokenError.message);
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+  } catch (error) {
+    console.error('🔴 [REFRESH] Error:', error);
+    res.status(500).json({ message: 'Server error during refresh' });
+  }
+};
+
 // Helper function to clean up expired OTPs
 const cleanupExpiredOTPs = async () => {
   try {
@@ -695,5 +744,6 @@ module.exports = {
   verifyOTP,
   requestPasswordReset,
   resetPassword,
+  refresh,
   cleanupExpiredOTPs
 };
