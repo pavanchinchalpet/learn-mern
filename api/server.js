@@ -29,9 +29,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Supabase connection test
-supabase.from('users').select('count').limit(1)
-  .then(() => console.log('Connected to Supabase'))
-  .catch(err => console.error('Supabase connection error:', err));
+if (supabase) {
+  supabase.from('users').select('count').limit(1)
+    .then(() => console.log('✅ Connected to Supabase'))
+    .catch(err => console.error('❌ Supabase connection error:', err.message));
+} else {
+  console.log('⚠️ Supabase not configured - running in fallback mode');
+}
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

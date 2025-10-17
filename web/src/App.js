@@ -4,7 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import './App.css';
 
 // Lazy load components for better performance
-const Landing = lazy(() => import('./pages/Landing'));
+const LandingRedirect = lazy(() => import('./components/LandingRedirect'));
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -54,7 +54,7 @@ function AppShell() {
         <main>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<LandingRedirect />} />
               <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
