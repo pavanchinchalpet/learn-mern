@@ -2,6 +2,12 @@
 # MERN Quest
 A comprehensive learning platform built using the MERN stack with Supabase
 
+## 📋 Project Description
+
+Developed a full-stack quiz platform using the MERN stack with Supabase integration, interactive assessments, and real-time progress tracking.
+Designed optimized PostgreSQL schemas and integrated JWT authentication, OTP verification, and responsive UI functionality for secure, interactive, and engaging user experiences.
+Built a scalable admin dashboard and responsive React frontend with quiz management, scoring systems, and gamification features to enhance learner engagement.
+
 # 🎓 MERN Quest - Complete Learning Platform
 
 A comprehensive learning platform built using the MERN stack (MongoDB, Express, React, Node.js) with Supabase backend that helps learners master MERN concepts through interactive quizzes while earning points, badges, and climbing levels.
