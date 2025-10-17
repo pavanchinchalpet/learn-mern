@@ -8,7 +8,9 @@
     "server": "cd api && npm run dev",
     "client": "cd web && npm start",
     "install-all": "npm install && cd api && npm install && cd ../web && npm install",
-    "seed": "cd api && npm run seed"
+    "seed": "cd api && npm run seed",
+    "build": "cd web && npm run build",
+    "start": "cd web && npm start"
   },
   "keywords": ["mern", "quiz", "learning", "gamification"],
   "author": "",
