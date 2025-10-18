@@ -57,6 +57,35 @@ const getQuizById = async (req, res) => {
   }
 };
 
+// @desc    Get quiz questions by quiz ID
+// @route   GET /api/quiz/:id/questions
+// @access  Public
+const getQuizQuestions = async (req, res) => {
+  try {
+    const { data: questions, error } = await quizHelpers.getQuizQuestions(req.params.id);
+    
+    if (error) {
+      console.error('Get quiz questions error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+    
+    // Transform questions to match frontend expectations
+    const transformedQuestions = questions.map(q => ({
+      id: q.id,
+      question: q.question_text,
+      options: q.options,
+      correctAnswer: q.correct_answer,
+      explanation: q.explanation,
+      points: q.points || 10
+    }));
+    
+    res.json(transformedQuestions);
+  } catch (error) {
+    console.error('Get quiz questions error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Get quiz categories
 // @route   GET /api/quiz/categories
 // @access  Public
@@ -199,6 +228,7 @@ const getCategoryIcon = (category) => {
 module.exports = {
   getQuizzes,
   getQuizById,
+  getQuizQuestions,
   getQuizCategories,
   submitQuiz,
   getQuizStats

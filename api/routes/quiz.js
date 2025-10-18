@@ -4,6 +4,7 @@ const { auth } = require('../middleware/auth');
 const {
   getQuizzes,
   getQuizById,
+  getQuizQuestions,
   submitQuiz,
   getQuizStats,
   getQuizCategories
@@ -16,8 +17,13 @@ const router = express.Router();
 // @access  Public
 router.get('/', getQuizzes);
 
+// @route   GET /api/quiz/:id/questions
+// @desc    Get quiz questions
+// @access  Public
+router.get('/:id/questions', getQuizQuestions);
+
 // @route   GET /api/quiz/categories
-// @desc    Get quiz categories with stats
+// @desc    Get quiz categories
 // @access  Public
 router.get('/categories', getQuizCategories);
 
