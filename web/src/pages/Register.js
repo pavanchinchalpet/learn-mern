@@ -98,6 +98,7 @@ const Register = () => {
                   onChange={handleChange}
                   className="form-input"
                   placeholder="Choose your username"
+                  autoComplete="username"
                   required
                   minLength="3"
                   maxLength="30"
@@ -116,6 +117,7 @@ const Register = () => {
                   onChange={handleChange}
                   className="form-input"
                   placeholder="Enter your email"
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -132,6 +134,7 @@ const Register = () => {
                   onChange={handleChange}
                   className="form-input"
                   placeholder="Create a strong password"
+                  autoComplete="new-password"
                   required
                   minLength="6"
                 />
@@ -149,6 +152,7 @@ const Register = () => {
                   onChange={handleChange}
                   className="form-input"
                   placeholder="Confirm your password"
+                  autoComplete="new-password"
                   required
                 />
               </div>
