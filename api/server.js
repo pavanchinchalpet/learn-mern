@@ -25,6 +25,7 @@ const io = socketIo(server, {
 const allowedOrigins = [
   process.env.CLIENT_URL || "http://localhost:3000",
   "https://learn-mern-chinchalpetpavankumar-2177s-projects.vercel.app",
+  "https://learn-mern-pied.vercel.app",
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ];
