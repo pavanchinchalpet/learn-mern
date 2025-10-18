@@ -95,8 +95,8 @@ router.get('/profile', auth, supabaseAuth.getProfile);
 router.post('/logout', supabaseAuth.logout);
 
 // @route   POST /api/auth/refresh
-// @desc    Refresh access token using httpOnly cookie
-// @access  Public (cookie-protected)
-// JWT flow does not use refresh endpoint here
+// @desc    Refresh access token
+// @access  Public
+router.post('/refresh', supabaseAuth.refresh);
 
 module.exports = router;

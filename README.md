@@ -30,9 +30,14 @@ A comprehensive learning platform built using the MERN stack (MongoDB, Express, 
 - ✅ **Daily Streaks**: Build momentum with consistent learning
 
 ### 🛠 Admin Features
-- ✅ **User Analytics**: Track user performance and platform statistics
-- ✅ **Quiz Management**: Add, update, and delete quiz questions
-- ✅ **Real-time Dashboard**: Monitor platform activity and user engagement
+- ✅ **Comprehensive Quiz Management**: Create, edit, delete quizzes and questions
+- ✅ **Bulk Question Import**: Upload multiple questions via CSV/JSON files
+- ✅ **Real-time Session Monitoring**: Track active quiz sessions and participants
+- ✅ **Advanced Analytics**: Detailed quiz performance and user statistics
+- ✅ **User Management**: View, manage, and delete user accounts
+- ✅ **Session Control**: Start, pause, resume, and end quiz sessions
+- ✅ **Question Management**: Individual question editing and bulk operations
+- ✅ **Dashboard Analytics**: Platform statistics and performance metrics
 
 ### 🌟 Advanced Features
 - 🔥 **Daily Streaks & XP Boosters**
@@ -126,12 +131,19 @@ mern-quest/
    CLIENT_URL=http://localhost:3000
    ```
 
-4. **Set up Supabase Database**
+4. **Set up Supabase Database** (Optional - Fallback Mode Available)
    
-   - Create a new Supabase project
+   **Option A: With Supabase (Recommended)**
+   - Create a new Supabase project at [supabase.com](https://supabase.com)
+   - Copy your project URL and API keys to the `.env` file
    - Run the SQL migrations to create tables
    - Insert sample quiz data
    - Configure authentication settings
+   
+   **Option B: Fallback Mode (No Database Required)**
+   - The application works with mock data when Supabase is not configured
+   - Perfect for development and testing
+   - Admin dashboard shows sample quizzes, users, and sessions
 
 5. **Start the application**
    ```bash
@@ -147,25 +159,35 @@ mern-quest/
    - Backend API: http://localhost:5000
 
 ### 🔑 Sample Login Credentials
-After setting up the database, you can register new users or use existing ones:
+
+**With Supabase Database:**
 - **Admin User**: Create via registration with admin privileges
 - **Regular User**: Register through the signup form
+
+**Fallback Mode (No Database):**
+- The application works with mock authentication
+- Admin dashboard shows sample data for testing
+- Perfect for development and demonstration purposes
 
 ## 📝 Sample Data
 
 The project includes comprehensive sample quiz data covering all MERN stack components:
 
 ### Quiz Categories
+- **JavaScript** (30 questions): Core concepts, ES6+, async/await, closures
+- **Node.js** (12 questions): Modules, event loop, APIs, file system
+- **React** (20 questions): Hooks, components, state/props, lifecycle
+- **Express** (12 questions): Middleware, routing, error handling
 - **MongoDB** (8 questions): CRUD operations, schemas, indexes, aggregation
-- **Express** (5 questions): Middleware, routing, error handling
-- **React** (7 questions): Hooks, components, state/props, lifecycle
-- **Node** (7 questions): Modules, event loop, async/await, APIs
-- **MERN** (3 questions): Integration and stack overview
+- **MERN** (20 questions): Integration and full-stack scenarios
+- **Authentication** (10 questions): Security, JWT, OAuth
+- **Performance** (8 questions): Optimization, caching, best practices
+- **Deployment** (10 questions): Production deployment strategies
 
 ### Difficulty Levels
-- **Easy** (15 questions): Basic concepts and fundamentals
-- **Medium** (12 questions): Intermediate topics and practical usage
-- **Hard** (3 questions): Advanced concepts like event loop
+- **Easy** (50 questions): Basic concepts and fundamentals
+- **Medium** (40 questions): Intermediate topics and practical usage
+- **Hard** (30 questions): Advanced concepts and complex scenarios
 
 ### Features
 - ✅ Multiple choice questions with explanations
@@ -173,10 +195,14 @@ The project includes comprehensive sample quiz data covering all MERN stack comp
 - ✅ Category-based organization
 - ✅ Difficulty progression
 - ✅ Real-world MERN stack scenarios
+- ✅ Admin can add/edit/delete questions
+- ✅ Bulk import via CSV/JSON files
 
 ## 📊 Database Schema (Supabase)
 
-### Users Table
+### Core Tables
+
+**Users Table**
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -196,24 +222,66 @@ CREATE TABLE users (
 );
 ```
 
-### Quizzes Table
+**Quizzes Table**
 ```sql
 CREATE TABLE quizzes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  question TEXT NOT NULL,
-  options TEXT[] NOT NULL,
-  answer VARCHAR(255) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
   category VARCHAR(50) NOT NULL,
   difficulty VARCHAR(20) NOT NULL,
-  points INTEGER DEFAULT 10,
-  times_answered INTEGER DEFAULT 0,
-  times_correct INTEGER DEFAULT 0,
+  time_limit INTEGER DEFAULT 30,
+  total_questions INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Quiz Questions Table**
+```sql
+CREATE TABLE quiz_questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
+  question TEXT NOT NULL,
+  options TEXT[] NOT NULL,
+  correct_answer VARCHAR(255) NOT NULL,
+  explanation TEXT,
+  points INTEGER DEFAULT 10,
+  order_index INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW()
 );
 ```
 
-### Quiz Scores Table
+**Quiz Sessions Table**
+```sql
+CREATE TABLE quiz_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
+  session_code VARCHAR(10) UNIQUE NOT NULL,
+  status VARCHAR(20) DEFAULT 'pending',
+  started_at TIMESTAMP,
+  ended_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Quiz Session Participants Table**
+```sql
+CREATE TABLE quiz_session_participants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID REFERENCES quiz_sessions(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  score INTEGER DEFAULT 0,
+  time_taken INTEGER DEFAULT 0,
+  answers JSONB,
+  status VARCHAR(20) DEFAULT 'active',
+  joined_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP
+);
+```
+
+**Quiz Scores Table**
 ```sql
 CREATE TABLE quiz_scores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -251,34 +319,61 @@ CREATE TABLE quiz_scores (
 - `GET /api/user/achievements` - Get user achievements
 
 ### Admin
-- `POST /api/admin/quiz` - Create new quiz
-- `PUT /api/admin/quiz/:id` - Update quiz
-- `DELETE /api/admin/quiz/:id` - Delete quiz
-- `GET /api/admin/analytics` - Get platform analytics
 - `GET /api/admin/users` - Get all users
+- `DELETE /api/admin/users/:userId` - Delete user
+- `GET /api/admin/quizzes` - Get all quizzes
+- `POST /api/admin/quizzes` - Create new quiz
+- `PUT /api/admin/quizzes/:quizId` - Update quiz
+- `DELETE /api/admin/quizzes/:quizId` - Delete quiz
+- `GET /api/admin/quizzes/:quizId/questions` - Get quiz questions
+- `POST /api/admin/questions` - Add question to quiz
+- `PUT /api/admin/questions/:questionId` - Update question
+- `DELETE /api/admin/questions/:questionId` - Delete question
+- `POST /api/admin/quizzes/:quizId/questions/bulk` - Bulk add questions
+- `GET /api/admin/quizzes/:quizId/analytics` - Get quiz analytics
+- `POST /api/admin/upload-quiz` - Upload quiz file (CSV/JSON)
+- `GET /api/admin/quiz-sessions` - Get all quiz sessions
+- `POST /api/admin/quiz-sessions` - Create quiz session
+- `GET /api/admin/quiz-sessions/:sessionId` - Get session details
+- `PUT /api/admin/quiz-sessions/:sessionId` - Update session status
+- `POST /api/admin/quiz-sessions/:sessionId/end` - End quiz session
+- `GET /api/admin/quiz-sessions/:sessionId/participants` - Get session participants
 
 ## 🎯 Features in Detail
 
 ### Quiz System
-- Multiple choice questions
-- Category-based filtering (MongoDB, Express, React, Node)
+- Multiple choice questions with 4 options
+- Category-based filtering (MongoDB, Express, React, Node, JavaScript, etc.)
 - Difficulty levels (Easy, Medium, Hard)
 - Real-time scoring and feedback
-- Progress tracking
+- Progress tracking and analytics
+- Time-limited quizzes with auto-submit
+
+### Admin Dashboard
+- **Quiz Management**: Complete CRUD operations for quizzes and questions
+- **Bulk Operations**: Import multiple questions via CSV/JSON upload
+- **Session Monitoring**: Real-time tracking of active quiz sessions
+- **User Management**: View, edit, and delete user accounts
+- **Analytics Dashboard**: Comprehensive performance metrics and statistics
+- **Question Editor**: Individual question editing with options and explanations
+- **Session Control**: Start, pause, resume, and end quiz sessions
+- **Participant Tracking**: Monitor individual participant progress
 
 ### Gamification
-- **Points System**: Earn points for correct answers
-- **Level System**: Level up based on total points
+- **Points System**: Earn points for correct answers (10-20 points per question)
+- **Level System**: Level up based on total points accumulated
 - **Badges**: Unlock achievements (Perfect Score, Quiz Master, etc.)
 - **Streaks**: Daily login streaks for bonus points
-- **Leaderboard**: Compete with other users
+- **Leaderboard**: Compete with other users globally
+- **XP System**: Experience points for progression tracking
 
 ### User Experience
-- Clean, professional UI design
-- Responsive design for mobile and desktop
-- Real-time updates
-- Intuitive navigation
-- Loading states and error handling
+- **Clean Professional Design**: Black and white theme with light blue accents
+- **Responsive Design**: Optimized for mobile, tablet, and desktop
+- **Real-time Updates**: Live session monitoring and progress tracking
+- **Intuitive Navigation**: Easy-to-use admin interface
+- **Loading States**: Smooth user experience with proper feedback
+- **Error Handling**: Comprehensive error management and user notifications
 
 ## 🔒 Security Features
 
@@ -294,19 +389,38 @@ CREATE TABLE quiz_scores (
 ### Frontend (Vercel/Netlify)
 1. Build the React app: `npm run build`
 2. Deploy to Vercel or Netlify
-3. Set environment variables
+3. Set environment variables for API endpoints
 
 ### Backend (Render/Heroku)
-1. Set up MongoDB Atlas
+1. Set up Supabase project (optional - fallback mode available)
 2. Deploy to Render or Heroku
 3. Configure environment variables
 4. Set up CORS for frontend domain
 
 ### Database (Supabase)
-1. Create Supabase project
-2. Run SQL migrations
-3. Configure authentication
+1. Create Supabase project at [supabase.com](https://supabase.com)
+2. Run SQL migrations to create tables
+3. Configure authentication settings
 4. Set up environment variables
+5. **Note**: Application works in fallback mode without database
+
+### Environment Variables
+```env
+# Production Environment
+NODE_ENV=production
+PORT=5000
+
+# Supabase Configuration (Optional)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# JWT Configuration
+JWT_SECRET=your-production-jwt-secret
+
+# Client URL (for CORS)
+CLIENT_URL=https://your-frontend-domain.com
+```
 
 ## 🤝 Contributing
 
