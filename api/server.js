@@ -22,8 +22,33 @@ const io = socketIo(server, {
 });
 
 // Middleware
-const clientOrigin = process.env.CLIENT_URL || "http://localhost:3000";
-app.use(cors({ origin: clientOrigin, credentials: true }));
+const allowedOrigins = [
+  process.env.CLIENT_URL || "http://localhost:3000",
+  "https://learn-mern-chinchalpetpavankumar-2177s-projects.vercel.app",
+  "https://learn-mern-pied.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+];
+
+app.use(cors({ 
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost and 127.0.0.1 for development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true 
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
