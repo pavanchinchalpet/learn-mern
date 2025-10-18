@@ -171,38 +171,55 @@ const Quiz = () => {
     } catch (_) {}
   };
 
-  const handleQuizSelect = (categoryId) => {
+  const handleQuizSelect = async (categoryId) => {
     const selectedCategory = quizCategories.find(cat => cat.id === categoryId);
     if (selectedCategory) {
-      // Filter questions based on category
+      // Filter quizzes based on category
       const filteredQuizzes = quizzes.filter((quiz) => quiz.category_id === categoryId);
       
       if (filteredQuizzes.length > 0) {
-        // Limit questions based on category settings and remove duplicates
-        const maxQuestions = Math.min(selectedCategory.questions, filteredQuizzes.length);
-        const uniqueQuestions = filteredQuizzes.filter((quiz, index, self) => 
-          index === self.findIndex(q => q.id === quiz.id)
-        );
-        const selectedQuestions = uniqueQuestions.slice(0, maxQuestions);
-        
-        setSelectedQuiz({
-          ...selectedCategory,
-          questions: selectedQuestions
-        });
-        setCurrentQuizIndex(0);
-        setSelectedAnswers({});
-        setQuizComplete(false);
-        setResults(null);
-        
-        // Start the timer with 1:2 ratio (1 question = 2 minutes)
-        const calculatedTimeLimit = selectedQuestions.length * 2; // 1:2 ratio
-        startTimer(calculatedTimeLimit);
-        // Enter fullscreen and mark exam active
-        requestFullscreen();
-        setExamActive(true);
-        autoSubmitTriggeredRef.current = false;
+        try {
+          // Since each quiz is a question, we can use them directly
+          // Transform quizzes to question format
+          const questions = filteredQuizzes.map(quiz => ({
+            id: quiz.id,
+            question: quiz.question_text,
+            options: quiz.options,
+            correctAnswer: quiz.answer, // This should be the correct answer text
+            explanation: quiz.explanation,
+            points: quiz.points || 10
+          }));
+          
+          if (questions.length > 0) {
+            // Limit questions based on category settings
+            const maxQuestions = Math.min(selectedCategory.questions, questions.length);
+            const selectedQuestions = questions.slice(0, maxQuestions);
+            
+            setSelectedQuiz({
+              ...selectedCategory,
+              questions: selectedQuestions
+            });
+            setCurrentQuizIndex(0);
+            setSelectedAnswers({});
+            setQuizComplete(false);
+            setResults(null);
+            
+            // Start the timer with 1:2 ratio (1 question = 2 minutes)
+            const calculatedTimeLimit = selectedQuestions.length * 2; // 1:2 ratio
+            startTimer(calculatedTimeLimit);
+            // Enter fullscreen and mark exam active
+            requestFullscreen();
+            setExamActive(true);
+            autoSubmitTriggeredRef.current = false;
+          } else {
+            alert('No questions available for this quiz. Please try another category.');
+          }
+        } catch (error) {
+          console.error('Error loading quiz questions:', error);
+          alert('Error loading quiz questions. Please try again.');
+        }
       } else {
-        alert('No questions available for this category. Please try another quiz.');
+        alert('No quizzes available for this category. Please try another quiz.');
       }
     }
   };

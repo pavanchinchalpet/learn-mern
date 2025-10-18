@@ -183,6 +183,59 @@ const quizHelpers = {
     return { data, error };
   },
 
+  // Get quiz questions by quiz ID
+  getQuizQuestions: async (quizId) => {
+    const client = supabase.getServiceClient() || supabase;
+    
+    // First try to get questions from quiz_questions table (if it exists)
+    const { data: questionsFromTable, error: tableError } = await client
+      .from('quiz_questions')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('created_at', { ascending: true });
+    
+    // If quiz_questions table has data, return it
+    if (!tableError && questionsFromTable && questionsFromTable.length > 0) {
+      return { data: questionsFromTable, error: null };
+    }
+    
+    // Fallback: Get quizzes from the same category as individual questions
+    const { data: quiz, error: quizError } = await client
+      .from('quizzes')
+      .select('*')
+      .eq('id', quizId)
+      .single();
+    
+    if (quizError || !quiz) {
+      return { data: [], error: quizError };
+    }
+    
+    // Get all quizzes from the same category to use as questions
+    const { data: categoryQuizzes, error: categoryError } = await client
+      .from('quizzes')
+      .select('*')
+      .eq('category_id', quiz.category_id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+    
+    if (categoryError) {
+      return { data: [], error: categoryError };
+    }
+    
+    // Transform quizzes to question format
+    const questions = categoryQuizzes.map(q => ({
+      id: q.id,
+      question_text: q.question_text,
+      options: q.options,
+      correct_answer: q.correct_answer || 0, // Default to first option if not set
+      explanation: q.explanation,
+      points: q.points || 10,
+      quiz_id: q.id
+    }));
+    
+    return { data: questions, error: null };
+  },
+
   // Get quiz categories
   getQuizCategories: async () => {
     // Prefer service client to bypass RLS
@@ -292,7 +345,7 @@ const quizHelpers = {
       
       return {
         questionId: answer.questionId,
-        question: quiz?.question || '',
+        question: quiz?.question_text || '',
         selectedAnswer: answer.selectedAnswer,
         correctAnswer: quiz?.answer || '',
         isCorrect,
