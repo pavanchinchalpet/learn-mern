@@ -324,135 +324,161 @@ const logout = async (req, res) => {
   }
 };
 
-// @desc    Send OTP for login
+// @desc    Send OTP for login using Supabase Auth
 // @route   POST /api/auth/send-otp
 // @access  Public
 const sendOTP = async (req, res) => {
   try {
     const { email } = req.body;
 
+    console.log('🔵 [SEND OTP] Request received for email:', email);
+
     // Check if user exists
     const { data: user } = await userHelpers.getUserByEmailOrUsername(email, '');
     if (!user) {
+      console.log('🔴 [SEND OTP] User not found:', email);
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Hash the OTP for secure storage
-    const otpHash = await bcrypt.hash(otp, 12);
-    
-    // Set OTP expiration (10 minutes from now)
-    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    console.log('🔵 [SEND OTP] User found, sending OTP via Supabase Auth...');
+    console.log('🔵 [SEND OTP] Supabase client status:', supabase ? 'Connected' : 'Not connected');
 
-    // Deactivate any existing OTP attempts for this user using service client
-    const serviceClient = supabase.getServiceClient();
-    await serviceClient
-      .from('auth_logins')
-      .update({ is_active: false })
-      .eq('user_id', user.id)
-      .eq('method', 'otp');
+    // Generate a 6-digit OTP for development logging
+    const devOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Use Supabase Auth to send OTP email
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: {
+        // Don't set emailRedirectTo to force OTP instead of magic link
+        shouldCreateUser: false // Don't create user if they don't exist
+      }
+    });
 
-    // Store OTP in auth_logins table using service client
-    const { error: otpStoreError } = await serviceClient
-      .from('auth_logins')
-      .insert({
-        user_id: user.id,
-        method: 'otp',
-        otp_hash: otpHash,
-        otp_expires_at: otpExpiresAt,
-        is_verified: false,
-        is_active: true,
-        ip_address: req.ip || req.connection.remoteAddress,
-        user_agent: req.get('User-Agent')
+    console.log('🔵 [SEND OTP] Supabase response data:', data);
+    console.log('🔵 [SEND OTP] Supabase response error:', error);
+
+    if (error) {
+      console.error('🔴 [SEND OTP] Supabase Auth error:', error);
+      console.error('🔴 [SEND OTP] Error details:', JSON.stringify(error, null, 2));
+      
+      // For development, always show OTP in console
+      console.log(`📧 [DEV OTP] Generated OTP for ${email}: ${devOtp}`);
+      console.log(`📧 [DEV OTP] This OTP is valid for testing purposes`);
+      
+      return res.status(500).json({ 
+        message: 'Failed to send OTP email. Check Supabase email configuration.',
+        devOtp: process.env.NODE_ENV === 'development' ? devOtp : undefined,
+        error: error.message,
+        errorCode: error.code,
+        errorDetails: error
       });
-
-    if (otpStoreError) {
-      console.error('Error storing OTP:', otpStoreError);
-      return res.status(500).json({ message: 'Error storing OTP' });
     }
 
-    // Send OTP via console log (for development)
-    console.log(`📧 [OTP] OTP for ${email}: ${otp}`);
+    // For development, always log the OTP
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📧 [DEV OTP] Generated OTP for ${email}: ${devOtp}`);
+      console.log(`📧 [DEV OTP] This OTP is valid for testing purposes`);
+      console.log(`📧 [DEV OTP] Check your email for the actual OTP or use the dev OTP above`);
+    }
 
+    console.log('✅ [SEND OTP] OTP email sent successfully via Supabase Auth');
+    console.log('📧 [SEND OTP] Check your email inbox for the 6-digit OTP code');
+    
     res.json({ 
-      message: 'OTP sent successfully',
-      expiresIn: 600 // 10 minutes in seconds
+      message: 'OTP sent successfully to your email. Check your inbox for the 6-digit code.',
+      expiresIn: 300, // Supabase OTP expires in 5 minutes (300 seconds)
+      method: 'supabase-auth',
+      devOtp: process.env.NODE_ENV === 'development' ? devOtp : undefined
     });
   } catch (error) {
-    console.error('OTP send error:', error);
+    console.error('🔴 [SEND OTP] Unexpected error:', error);
     res.status(500).json({ message: 'Error sending OTP' });
   }
 };
 
-// @desc    Verify OTP and login
+// @desc    Verify OTP and login using Supabase Auth
 // @route   POST /api/auth/verify-otp
 // @access  Public
 const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    // Check if user exists
-    const { data: user } = await userHelpers.getUserByEmailOrUsername(email, '');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    console.log('🔵 [VERIFY OTP] Request received for email:', email);
+    console.log('🔵 [VERIFY OTP] OTP received:', otp);
 
-    // Use service client to bypass RLS for OTP verification
-    const serviceClient = supabase.getServiceClient();
-
-    // Find active OTP for this user
-    const { data: otpRecord, error: otpFetchError } = await serviceClient
-      .from('auth_logins')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('method', 'otp')
-      .eq('is_active', true)
-      .eq('is_verified', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (otpFetchError || !otpRecord) {
-      return res.status(400).json({ message: 'No valid OTP found. Please request a new OTP.' });
-    }
-
-    // Check if OTP has expired
-    const now = new Date();
-    if (new Date(otpRecord.otp_expires_at) < now) {
-      // Mark OTP as inactive
-      await serviceClient
-        .from('auth_logins')
-        .update({ is_active: false })
-        .eq('id', otpRecord.id);
+    // For development, allow any 6-digit OTP if it matches our dev pattern
+    if (process.env.NODE_ENV === 'development' && otp && otp.length === 6 && /^\d{6}$/.test(otp)) {
+      console.log('🔵 [VERIFY OTP] Development mode - accepting any 6-digit OTP');
       
-      return res.status(400).json({ message: 'OTP has expired. Please request a new OTP.' });
+      // Get user profile from our users table
+      const { data: userProfile, error: profileError } = await userHelpers.getUserByEmailOrUsername(email, '');
+      
+      if (profileError || !userProfile) {
+        console.log('🔴 [VERIFY OTP] User profile not found:', email);
+        return res.status(404).json({ message: 'User profile not found' });
+      }
+
+      // Generate custom JWT token for our API
+      const token = generateToken(userProfile.id);
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      console.log('✅ [VERIFY OTP] Development OTP verified successfully for:', userProfile.username);
+
+      res.json({
+        message: 'OTP verified successfully (development mode)',
+        token: token,
+        user: {
+          id: userProfile.id,
+          username: userProfile.username,
+          email: userProfile.email,
+          avatar: userProfile.avatar,
+          points: userProfile.points,
+          level: userProfile.level,
+          streak: userProfile.streak,
+          isAdmin: userProfile.is_admin
+        }
+      });
+      return;
     }
 
-    // Verify the OTP
-    const isValidOTP = await bcrypt.compare(otp, otpRecord.otp_hash);
-    if (!isValidOTP) {
-      return res.status(400).json({ message: 'Invalid OTP' });
+    // Verify OTP with Supabase Auth (production mode)
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email,
+      token: otp,
+      type: 'email'
+    });
+
+    if (error) {
+      console.error('🔴 [VERIFY OTP] Supabase Auth verification error:', error);
+      return res.status(400).json({ 
+        message: 'Invalid or expired OTP',
+        error: error.message
+      });
     }
 
-    // Mark OTP as verified and inactive
-    const { error: updateError } = await serviceClient
-      .from('auth_logins')
-      .update({ 
-        is_verified: true, 
-        is_active: false,
-        updated_at: new Date()
-      })
-      .eq('id', otpRecord.id);
-
-    if (updateError) {
-      console.error('Error updating OTP record:', updateError);
-      return res.status(500).json({ message: 'Error verifying OTP' });
+    if (!data.user) {
+      console.log('🔴 [VERIFY OTP] No user data returned from Supabase');
+      return res.status(400).json({ message: 'Authentication failed' });
     }
 
-    // Generate JWT token
-    const token = generateToken(user.id);
+    console.log('✅ [VERIFY OTP] OTP verified successfully for user:', data.user.email);
+
+    // Get user profile from our users table
+    const { data: userProfile, error: profileError } = await userHelpers.getUserByEmailOrUsername(email, '');
+    
+    if (profileError || !userProfile) {
+      console.log('🔴 [VERIFY OTP] User profile not found:', email);
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    // Generate custom JWT token for our API (not Supabase JWT)
+    const token = generateToken(userProfile.id);
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -460,84 +486,69 @@ const verifyOTP = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
+    console.log('✅ [VERIFY OTP] Login successful for:', userProfile.username);
+
     res.json({
       message: 'OTP verified successfully',
       token: token, // Include token in response for localStorage storage
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        points: user.points,
-        level: user.level,
-        streak: user.streak,
-        isAdmin: user.is_admin
+        id: userProfile.id,
+        username: userProfile.username,
+        email: userProfile.email,
+        avatar: userProfile.avatar,
+        points: userProfile.points,
+        level: userProfile.level,
+        streak: userProfile.streak,
+        isAdmin: userProfile.is_admin
       }
     });
   } catch (error) {
-    console.error('OTP verify error:', error);
+    console.error('🔴 [VERIFY OTP] Unexpected error:', error);
     res.status(500).json({ message: 'Error verifying OTP' });
   }
 };
 
-// @desc    Request password reset
+// @desc    Request password reset using Supabase Auth
 // @route   POST /api/auth/reset-password-request
 // @access  Public
 const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
 
+    console.log('🔵 [PASSWORD RESET] Request received for email:', email);
+
     // Check if user exists
     const { data: user } = await userHelpers.getUserByEmailOrUsername(email, '');
     if (!user) {
+      console.log('🔴 [PASSWORD RESET] User not found:', email);
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Generate 6-digit OTP for password reset
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Hash the OTP for secure storage
-    const otpHash = await bcrypt.hash(otp, 12);
-    
-    // Set OTP expiration (15 minutes from now for password reset)
-    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    console.log('🔵 [PASSWORD RESET] User found, sending reset email via Supabase Auth...');
 
-    // Deactivate any existing OTP attempts for this user
-    await supabase
-      .from('auth_logins')
-      .update({ is_active: false })
-      .eq('user_id', user.id)
-      .eq('method', 'otp');
+    // Use Supabase Auth to send password reset email
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password`
+    });
 
-    // Store OTP in auth_logins table
-    const { error: otpStoreError } = await supabase
-      .from('auth_logins')
-      .insert({
-        user_id: user.id,
-        method: 'otp',
-        otp_hash: otpHash,
-        otp_expires_at: otpExpiresAt,
-        is_verified: false,
-        is_active: true,
-        ip_address: req.ip || req.connection.remoteAddress,
-        user_agent: req.get('User-Agent')
+    if (error) {
+      console.error('🔴 [PASSWORD RESET] Supabase Auth error:', error);
+      return res.status(500).json({ 
+        message: 'Failed to send password reset email. Check Supabase email configuration.',
+        error: error.message
       });
-
-    if (otpStoreError) {
-      console.error('Error storing password reset OTP:', otpStoreError);
-      return res.status(500).json({ message: 'Error storing OTP' });
     }
 
-    // Send OTP via console log (for development)
-    console.log(`📧 [OTP] OTP for ${email}: ${otp}`);
-
+    console.log('✅ [PASSWORD RESET] Password reset email sent successfully via Supabase Auth');
+    
     res.json({ 
-      message: 'Password reset OTP sent successfully',
-      expiresIn: 900 // 15 minutes in seconds
+      message: 'Password reset email sent successfully',
+      expiresIn: 3600, // Supabase reset link expires in 1 hour
+      method: 'supabase-auth'
     });
   } catch (error) {
-    console.error('Password reset request error:', error);
-    res.status(500).json({ message: 'Error sending password reset OTP' });
+    console.error('🔴 [PASSWORD RESET] Unexpected error:', error);
+    res.status(500).json({ message: 'Error sending password reset email' });
   }
 };
 
@@ -642,7 +653,11 @@ const getCurrentUser = async (req, res) => {
 
     console.log('✅ [GET CURRENT USER] User profile found:', userProfile.username);
     
+    // Get the current token from the request
+    const token = req.header('Authorization')?.replace('Bearer ', '') || req.cookies?.token;
+    
     res.json({
+      token: token, // Include the token in the response
       user: {
         id: userProfile.id,
         username: userProfile.username,
@@ -677,12 +692,16 @@ const refresh = async (req, res) => {
   try {
     console.log('🔵 [REFRESH] Refresh request received');
     
-    // For JWT-based auth, we don't actually refresh tokens
-    // Instead, we validate the current token and return user info
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    // Check for token in Authorization header or cookies
+    let token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token && req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+      console.log('🔵 [REFRESH] Token found in cookies');
+    }
     
     if (!token) {
-      console.log('🔴 [REFRESH] No token provided');
+      console.log('🔴 [REFRESH] No token provided in header or cookies');
       return res.status(401).json({ message: 'No token provided' });
     }
 
@@ -700,6 +719,7 @@ const refresh = async (req, res) => {
       console.log('✅ [REFRESH] Refresh successful for user:', user.username);
       res.json({
         message: 'Token refreshed successfully',
+        token: token, // Return the same token
         user: {
           id: user.id,
           username: user.username,

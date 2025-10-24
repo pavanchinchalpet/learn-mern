@@ -53,7 +53,7 @@ const Login = () => {
     
     if (result.success) {
       setOtpSent(true);
-      setOtpTimer(60); // 60 seconds timer
+      setOtpTimer(300); // 300 seconds (5 minutes) timer to match Supabase OTP expiration
       const timer = setInterval(() => {
         setOtpTimer((prev) => {
           if (prev <= 1) {
@@ -273,6 +273,9 @@ const Login = () => {
                   <div className="success-message">
                     <span>📧</span>
                     <span>OTP sent to <strong>{formData.email}</strong></span>
+                    <div style={{ fontSize: '0.875rem', marginTop: '0.5rem', color: '#6b7280' }}>
+                      Check your email inbox for the 6-digit OTP code
+                    </div>
                   </div>
 
                   <div className="form-group">

@@ -20,12 +20,25 @@ const Quiz = () => {
   const [showFullReview, setShowFullReview] = useState(false);
   const [examActive, setExamActive] = useState(false);
   const [pausedQuiz, setPausedQuiz] = useState(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [currentExplanation, setCurrentExplanation] = useState('');
+  const [questionFeedback, setQuestionFeedback] = useState(null);
+  const [quizProgress, setQuizProgress] = useState(0);
   const autoSubmitTriggeredRef = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     loadQuizData();
   }, []);
+
+  // Update quiz progress when answers change
+  useEffect(() => {
+    if (selectedQuiz && selectedQuiz.questions) {
+      const totalQuestions = selectedQuiz.questions.length;
+      const answeredQuestions = Object.keys(selectedAnswers).length;
+      setQuizProgress(Math.round((answeredQuestions / totalQuestions) * 100));
+    }
+  }, [selectedAnswers, selectedQuiz]);
 
   const handleAutoSubmit = useCallback(async () => {
     if (submitting) return;
@@ -255,6 +268,31 @@ const Quiz = () => {
       ...selectedAnswers,
       [questionId]: answer
     });
+    
+    // Show explanation if available
+    const question = selectedQuiz.questions.find(q => q.id === questionId);
+    if (question && question.explanation) {
+      setCurrentExplanation(question.explanation);
+      setShowExplanation(true);
+      
+      // Auto-hide explanation after 3 seconds
+      setTimeout(() => {
+        setShowExplanation(false);
+      }, 3000);
+    }
+    
+    // Provide immediate feedback
+    const isCorrect = question && question.correctAnswer !== undefined && 
+                     question.options[question.correctAnswer] === answer;
+    setQuestionFeedback({
+      isCorrect,
+      message: isCorrect ? 'Correct! 🎉' : 'Keep thinking... 🤔'
+    });
+    
+    // Clear feedback after 2 seconds
+    setTimeout(() => {
+      setQuestionFeedback(null);
+    }, 2000);
   };
 
   const handleSubmit = async () => {
@@ -894,6 +932,16 @@ const Quiz = () => {
           margin-top: 0 !important;
         }
         .quiz-page { padding-top: 0 !important; }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-20px); max-height: 0; }
+          to { opacity: 1; transform: translateY(0); max-height: 200px; }
+        }
       `}</style>
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 24, maxWidth: 1400, margin: '0 auto', padding: '24px' }}>
         {/* Left Fixed Panel */}
@@ -915,6 +963,30 @@ const Quiz = () => {
             {/* Questions attempted count */}
             <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 700, letterSpacing: 0.5 }}>QUESTIONS ATTEMPTED</div>
             <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 800, marginBottom: 16 }}>{Object.keys(selectedAnswers).length} / {selectedQuiz.questions.length}</div>
+            
+            {/* Progress Bar */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>PROGRESS</div>
+              <div style={{ 
+                width: '100%', 
+                height: 8, 
+                background: '#334155', 
+                borderRadius: 4, 
+                overflow: 'hidden',
+                marginBottom: 8
+              }}>
+                <div style={{ 
+                  width: `${quizProgress}%`, 
+                  height: '100%', 
+                  background: 'linear-gradient(90deg, #10b981, #059669)', 
+                  transition: 'width 0.3s ease',
+                  borderRadius: 4
+                }}></div>
+              </div>
+              <div style={{ color: '#10b981', fontSize: 14, fontWeight: 600, textAlign: 'center' }}>
+                {quizProgress}% Complete
+              </div>
+            </div>
             {/* Navigation grid */}
             <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>QUESTION NAVIGATION</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 12, paddingRight: 8 }}>
@@ -996,6 +1068,56 @@ const Quiz = () => {
                   );
                 })}
               </div>
+              
+              {/* Feedback Display */}
+              {questionFeedback && (
+                <div style={{
+                  marginTop: '16px',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  background: questionFeedback.isCorrect ? '#f0fdf4' : '#fef3c7',
+                  border: `1px solid ${questionFeedback.isCorrect ? '#bbf7d0' : '#fde68a'}`,
+                  color: questionFeedback.isCorrect ? '#166534' : '#92400e',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  animation: 'fadeIn 0.3s ease-in-out'
+                }}>
+                  <span style={{ fontSize: '18px' }}>
+                    {questionFeedback.isCorrect ? '✅' : '💡'}
+                  </span>
+                  {questionFeedback.message}
+                </div>
+              )}
+              
+              {/* Explanation Display */}
+              {showExplanation && currentExplanation && (
+                <div style={{
+                  marginTop: '16px',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#475569',
+                  animation: 'slideDown 0.3s ease-in-out'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    marginBottom: '8px',
+                    fontWeight: '600',
+                    color: '#1e293b'
+                  }}>
+                    <span style={{ fontSize: '16px' }}>💡</span>
+                    Explanation:
+                  </div>
+                  <div style={{ lineHeight: '1.6' }}>
+                    {currentExplanation}
+                  </div>
+                </div>
+              )}
             </div>
           {/* Navigation buttons */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>

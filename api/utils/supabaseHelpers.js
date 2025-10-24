@@ -187,19 +187,9 @@ const quizHelpers = {
   getQuizQuestions: async (quizId) => {
     const client = supabase.getServiceClient() || supabase;
     
-    // First try to get questions from quiz_questions table (if it exists)
-    const { data: questionsFromTable, error: tableError } = await client
-      .from('quiz_questions')
-      .select('*')
-      .eq('quiz_id', quizId)
-      .order('created_at', { ascending: true });
+    console.log('🔵 [QUIZ HELPERS] Getting questions for quiz:', quizId);
     
-    // If quiz_questions table has data, return it
-    if (!tableError && questionsFromTable && questionsFromTable.length > 0) {
-      return { data: questionsFromTable, error: null };
-    }
-    
-    // Fallback: Get quizzes from the same category as individual questions
+    // Get the quiz to find its category
     const { data: quiz, error: quizError } = await client
       .from('quizzes')
       .select('*')
@@ -207,8 +197,11 @@ const quizHelpers = {
       .single();
     
     if (quizError || !quiz) {
+      console.log('🔴 [QUIZ HELPERS] Quiz not found:', quizError);
       return { data: [], error: quizError };
     }
+    
+    console.log('✅ [QUIZ HELPERS] Found quiz:', quiz.title, 'Category:', quiz.category_id);
     
     // Get all quizzes from the same category to use as questions
     const { data: categoryQuizzes, error: categoryError } = await client
@@ -219,20 +212,40 @@ const quizHelpers = {
       .order('created_at', { ascending: true });
     
     if (categoryError) {
+      console.log('🔴 [QUIZ HELPERS] Error getting category quizzes:', categoryError);
       return { data: [], error: categoryError };
     }
     
-    // Transform quizzes to question format
-    const questions = categoryQuizzes.map(q => ({
-      id: q.id,
-      question_text: q.question_text,
-      options: q.options,
-      correct_answer: q.correct_answer || 0, // Default to first option if not set
-      explanation: q.explanation,
-      points: q.points || 10,
-      quiz_id: q.id
-    }));
+    console.log('✅ [QUIZ HELPERS] Found', categoryQuizzes.length, 'questions in category');
     
+    // Transform quizzes to question format
+    const questions = categoryQuizzes.map(q => {
+      // Handle different answer field names
+      let correctAnswer = 0;
+      if (q.correct_answer !== undefined) {
+        correctAnswer = q.correct_answer;
+      } else if (q.answer !== undefined) {
+        // If answer is a string, find its index in options
+        if (typeof q.answer === 'string') {
+          correctAnswer = q.options.findIndex(option => option === q.answer);
+          if (correctAnswer === -1) correctAnswer = 0;
+        } else {
+          correctAnswer = q.answer;
+        }
+      }
+      
+      return {
+        id: q.id,
+        question_text: q.question_text,
+        options: q.options,
+        correct_answer: correctAnswer,
+        explanation: q.explanation,
+        points: q.points || 10,
+        quiz_id: q.id
+      };
+    });
+    
+    console.log('✅ [QUIZ HELPERS] Transformed', questions.length, 'questions');
     return { data: questions, error: null };
   },
 
