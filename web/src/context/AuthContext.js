@@ -40,7 +40,8 @@ export const AuthProvider = ({ children }) => {
         }
         
         // Try to get user profile from our backend - use the correct endpoint
-        const response = await fetch('http://localhost:5000/api/auth/profile', {
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/auth/profile`, {
           method: 'GET',
           credentials: 'include', // Include cookies
           headers: {
@@ -64,7 +65,8 @@ export const AuthProvider = ({ children }) => {
           // Try refresh token if we have one
           if (token || hasCookie) {
             try {
-              const refreshResponse = await fetch('http://localhost:5000/api/auth/refresh', {
+              const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+              const refreshResponse = await fetch(`${apiUrl}/api/auth/refresh`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -120,7 +122,8 @@ export const AuthProvider = ({ children }) => {
       console.log('🔵 [AUTH CONTEXT] Checking if user exists:', email);
       
       // Use our backend API to check if user exists
-      const response = await fetch('http://localhost:5000/api/auth/send-otp', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/auth/send-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +161,8 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       setLoading(true);
       
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -213,7 +217,8 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       setLoading(true);
       
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -267,7 +272,8 @@ export const AuthProvider = ({ children }) => {
       console.log('🔵 [AUTH CONTEXT] Sending OTP for:', email);
       setError(null);
       
-      const response = await fetch('http://localhost:5000/api/auth/send-otp', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/auth/send-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -304,7 +310,8 @@ export const AuthProvider = ({ children }) => {
       console.log('🔵 [AUTH CONTEXT] Verifying OTP for:', email);
       setError(null);
       
-      const response = await fetch('http://localhost:5000/api/auth/verify-otp', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/auth/verify-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -350,7 +357,8 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔵 [AUTH CONTEXT] Logging out...');
       
-      const response = await fetch('http://localhost:5000/api/auth/logout', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include'
       });
