@@ -50,7 +50,7 @@ api.interceptors.response.use(
       return refreshClient
         .post('/api/auth/refresh')
         .then((res) => {
-          const accessToken = res.data?.session?.access_token;
+          const accessToken = res.data?.token;
           if (accessToken) {
             localStorage.setItem('token', accessToken);
             api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;

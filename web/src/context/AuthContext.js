@@ -55,7 +55,39 @@ export const AuthProvider = ({ children }) => {
             console.log('✅ [AUTH CONTEXT] User authenticated:', data.user?.username);
           }
           setUser(data.user);
+          
+          // Ensure token is in localStorage if we got a valid response
+          if (data.token && !localStorage.getItem('token')) {
+            localStorage.setItem('token', data.token);
+          }
         } else if (response.status === 401) {
+          // Try refresh token if we have one
+          if (token || hasCookie) {
+            try {
+              const refreshResponse = await fetch('http://localhost:5000/api/auth/refresh', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token && { 'Authorization': `Bearer ${token}` })
+                },
+              });
+              
+              if (refreshResponse.ok) {
+                const refreshData = await refreshResponse.json();
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('✅ [AUTH CONTEXT] Token refreshed successfully');
+                }
+                localStorage.setItem('token', refreshData.token);
+                setUser(refreshData.user);
+                setLoading(false);
+                return;
+              }
+            } catch (refreshError) {
+              console.log('🔴 [AUTH CONTEXT] Refresh failed:', refreshError);
+            }
+          }
+          
           // 401 is expected when user is not logged in - this is normal behavior
           if (process.env.NODE_ENV === 'development') {
             console.log('ℹ️ [AUTH CONTEXT] No active session found');

@@ -37,7 +37,7 @@ const upload = multer({
   }
 });
 
-// Get all quizzes for admin dashboard
+// Get quizzes with pagination and filtering
 router.get('/quizzes', auth, async (req, res) => {
   try {
     // Check if user is admin
@@ -45,44 +45,91 @@ router.get('/quizzes', auth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied. Admin role required.' });
     }
 
+    const { 
+      page = 1, 
+      limit = 10, 
+      category = '', 
+      difficulty = '', 
+      search = '',
+      sortBy = 'created_at',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+
     // Check if Supabase is available
     if (!supabase) {
       console.log('⚠️ [ADMIN] Supabase not configured, returning mock data');
-      return res.json([
+      const mockQuizzes = [
         {
           id: 'mock-quiz-1',
           title: 'JavaScript Basics',
           description: 'Test your JavaScript knowledge',
           category: 'JavaScript',
-          difficulty: 'Easy',
+          difficulty: 'beginner',
           time_limit: 30,
           is_active: true,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          question_count: 5
         },
         {
           id: 'mock-quiz-2',
           title: 'Node.js Fundamentals',
           description: 'Learn Node.js concepts',
           category: 'Node.js',
-          difficulty: 'Medium',
+          difficulty: 'intermediate',
           time_limit: 45,
           is_active: true,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          question_count: 8
         },
         {
           id: 'mock-quiz-3',
           title: 'React Components',
           description: 'Master React component patterns',
           category: 'React',
-          difficulty: 'Hard',
+          difficulty: 'advanced',
           time_limit: 60,
           is_active: true,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          question_count: 12
         }
-      ]);
+      ];
+
+      // Apply filters to mock data
+      let filteredQuizzes = mockQuizzes;
+      if (category) {
+        filteredQuizzes = filteredQuizzes.filter(q => q.category.toLowerCase() === category.toLowerCase());
+      }
+      if (difficulty) {
+        filteredQuizzes = filteredQuizzes.filter(q => q.difficulty === difficulty);
+      }
+      if (search) {
+        filteredQuizzes = filteredQuizzes.filter(q => 
+          q.title.toLowerCase().includes(search.toLowerCase()) ||
+          q.description.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+
+      // Apply pagination
+      const total = filteredQuizzes.length;
+      const paginatedQuizzes = filteredQuizzes.slice(offset, offset + parseInt(limit));
+
+      return res.json({
+        quizzes: paginatedQuizzes,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNext: offset + parseInt(limit) < total,
+          hasPrev: page > 1
+        }
+      });
     }
 
-    const { data: quizzes, error } = await supabase
+    // Build query
+    let query = supabase
       .from('quizzes')
       .select(`
         id,
@@ -93,18 +140,115 @@ router.get('/quizzes', auth, async (req, res) => {
         time_limit,
         created_by,
         is_active,
-        created_at
-      `)
-      .order('created_at', { ascending: false });
+        created_at,
+        times_answered,
+        times_correct
+      `, { count: 'exact' });
+
+    // Apply filters
+    if (category) {
+      query = query.eq('category', category);
+    }
+    if (difficulty) {
+      query = query.eq('difficulty', difficulty);
+    }
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+
+    // Apply sorting
+    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+    // Apply pagination
+    query = query.range(offset, offset + parseInt(limit) - 1);
+
+    const { data: quizzes, error, count } = await query;
 
     if (error) {
       console.error('Error fetching quizzes:', error);
       return res.status(500).json({ error: 'Failed to fetch quizzes' });
     }
 
-    res.json(quizzes || []);
+    // Add question count for each quiz (this would be optimized with a join in production)
+    const quizzesWithCounts = await Promise.all(
+      (quizzes || []).map(async (quiz) => {
+        const { count: questionCount } = await supabase
+          .from('quizzes')
+          .select('id', { count: 'exact' })
+          .eq('id', quiz.id);
+        
+        return {
+          ...quiz,
+          question_count: questionCount || 0
+        };
+      })
+    );
+
+    res.json({
+      quizzes: quizzesWithCounts,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+        hasNext: offset + parseInt(limit) < (count || 0),
+        hasPrev: page > 1
+      }
+    });
   } catch (error) {
     console.error('Error in /quizzes route:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get quiz categories for filtering
+router.get('/categories', auth, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin' && !req.user.is_admin) {
+      return res.status(403).json({ error: 'Access denied. Admin role required.' });
+    }
+
+    // Check if Supabase is available
+    if (!supabase) {
+      console.log('⚠️ [ADMIN] Supabase not configured, returning mock categories');
+      return res.json([
+        { name: 'JavaScript', count: 25 },
+        { name: 'Node.js', count: 15 },
+        { name: 'React', count: 20 },
+        { name: 'MongoDB', count: 12 },
+        { name: 'Express', count: 8 },
+        { name: 'MERN', count: 18 },
+        { name: 'Authentication', count: 10 },
+        { name: 'Performance', count: 6 },
+        { name: 'Deployment', count: 7 }
+      ]);
+    }
+
+    const { data: categories, error } = await supabase
+      .from('quizzes')
+      .select('category')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching categories:', error);
+      return res.status(500).json({ error: 'Failed to fetch categories' });
+    }
+
+    // Count quizzes per category
+    const categoryCounts = {};
+    (categories || []).forEach(quiz => {
+      categoryCounts[quiz.category] = (categoryCounts[quiz.category] || 0) + 1;
+    });
+
+    const result = Object.entries(categoryCounts).map(([name, count]) => ({
+      name,
+      count
+    })).sort((a, b) => b.count - a.count);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error in /categories route:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -919,6 +1063,78 @@ router.post('/quizzes/:quizId/questions/bulk', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error in POST /quizzes/:quizId/questions/bulk route:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Test admin access (Admin only)
+router.get('/test', auth, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin' && !req.user.is_admin) {
+      return res.status(403).json({ error: 'Access denied. Admin role required.' });
+    }
+
+    res.json({ 
+      message: 'Admin access confirmed',
+      user: {
+        id: req.user.userId,
+        email: req.user.email,
+        role: req.user.role,
+        isAdmin: req.user.is_admin
+      }
+    });
+  } catch (error) {
+    console.error('Error in GET /test route:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get platform analytics (Admin only)
+router.get('/analytics', auth, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin' && !req.user.is_admin) {
+      return res.status(403).json({ error: 'Access denied. Admin role required.' });
+    }
+
+    // Check if Supabase is available
+    if (!supabase) {
+      console.log('⚠️ [ADMIN] Supabase not configured, returning mock analytics');
+      return res.json({
+        totalUsers: 15,
+        totalQuizzes: 8,
+        totalQuestions: 120,
+        activeSessions: 2,
+        averageScore: 78,
+        completionRate: 85
+      });
+    }
+
+    // Get basic analytics
+    const [usersResult, quizzesResult, scoresResult] = await Promise.all([
+      supabase.from('users').select('id', { count: 'exact' }),
+      supabase.from('quizzes').select('id', { count: 'exact' }).eq('is_active', true),
+      supabase.from('quiz_scores').select('score')
+    ]);
+
+    const totalUsers = usersResult.count || 0;
+    const totalQuizzes = quizzesResult.count || 0;
+    const scores = scoresResult.data || [];
+    
+    const averageScore = scores.length > 0 ? 
+      Math.round(scores.reduce((sum, score) => sum + score.score, 0) / scores.length) : 0;
+
+    res.json({
+      totalUsers,
+      totalQuizzes,
+      totalQuestions: totalQuizzes * 10, // Estimate
+      activeSessions: 0, // Would need to query quiz_sessions
+      averageScore,
+      completionRate: 85 // Mock data
+    });
+  } catch (error) {
+    console.error('Error in GET /analytics route:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
