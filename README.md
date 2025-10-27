@@ -29,7 +29,7 @@ A comprehensive gamified learning platform built using the MERN stack with Supab
 ## 🛠 Tech Stack
 
 **Frontend:**
-- React.js, React Router, Axios, Socket.IO Client, Tailwind CSS
+- React.js, React Router, Axios, Socket.IO Client, Tailwind  CSS.
 
 **Backend:**
 - Node.js, Express.js, Supabase, JWT, Socket.IO, bcryptjs
