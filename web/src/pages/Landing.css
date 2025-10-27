@@ -70,6 +70,18 @@ body {
   border-bottom: 1px solid var(--border-light);
   z-index: 1000;
   padding: 1rem 0;
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.landing-nav.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.landing-nav.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .nav-container {

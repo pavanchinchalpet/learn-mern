@@ -45,7 +45,8 @@ const LoadingSpinner = () => (
 function AppShell() {
   const location = useLocation();
   const isAuth = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/auth';
-  const hideNavbar = isAuth;
+  const isLanding = location.pathname === '/';
+  const hideNavbar = isAuth || isLanding;
   
   return (
     <div className="App min-h-screen bg-quest-gradient">

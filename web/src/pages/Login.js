@@ -13,6 +13,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
+  const [showOtpSuccess, setShowOtpSuccess] = useState(false);
   const { login, sendOTP, verifyOTP, error, setError } = useAuth();
   const navigate = useNavigate();
 
@@ -53,6 +54,7 @@ const Login = () => {
     
     if (result.success) {
       setOtpSent(true);
+      setShowOtpSuccess(true);
       setOtpTimer(300); // 300 seconds (5 minutes) timer to match Supabase OTP expiration
       const timer = setInterval(() => {
         setOtpTimer((prev) => {
@@ -63,6 +65,12 @@ const Login = () => {
           return prev - 1;
         });
       }, 1000);
+      
+      // Hide success message after 5 seconds
+      setTimeout(() => setShowOtpSuccess(false), 5000);
+    } else {
+      // Show error if OTP sending failed
+      setError(result.error || 'Failed to send OTP');
     }
     
     setLoading(false);
@@ -128,7 +136,7 @@ const Login = () => {
         <div className="login-form-panel">
           <div className="form-header">
             <h2 className="form-welcome">
-              👋 Welcome
+               Welcome 👋
             </h2>
             <p className="form-subtitle">Let's Login To Your Account</p>
           </div>
@@ -232,6 +240,23 @@ const Login = () => {
           ) : (
             /* OTP Login Form */
             <div>
+              {/* Success Popup */}
+              {showOtpSuccess && (
+                <div className="otp-success-popup">
+                  <div className="otp-success-icon">✓</div>
+                  <div className="otp-success-content">
+                    <h3>OTP Sent Successfully!</h3>
+                    <p>Check your email inbox for the 6-digit code</p>
+                  </div>
+                  <button 
+                    className="otp-close-btn"
+                    onClick={() => setShowOtpSuccess(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              
               {!otpSent ? (
                 <form onSubmit={handleSendOTP} className="login-form">
                   <div className="form-group">
@@ -270,12 +295,10 @@ const Login = () => {
                 </form>
               ) : (
                 <form onSubmit={handleOTPVerification} className="login-form">
-                  <div className="success-message">
-                    <span>📧</span>
-                    <span>OTP sent to <strong>{formData.email}</strong></span>
-                    <div style={{ fontSize: '0.875rem', marginTop: '0.5rem', color: '#6b7280' }}>
-                      Check your email inbox for the 6-digit OTP code
-                    </div>
+                  <div className="otp-verification-header">
+                    <p className="otp-verification-text">
+                      Enter the 6-digit code sent to your email
+                    </p>
                   </div>
 
                   <div className="form-group">
