@@ -1,7 +1,7 @@
 {
-  "name": "mern-quest-api",
+  "name": "quiz-sprint-api",
   "version": "1.0.0",
-  "description": "Backend API for MERN Quest learning platform",
+  "description": "Backend API for Quiz Sprint learning platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

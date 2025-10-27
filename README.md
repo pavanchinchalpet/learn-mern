@@ -1,6 +1,6 @@
-# 🎓 MERN Quest - Learning Platform
+# 🎓 Quiz Sprint - Learning Platform
 
-A comprehensive gamified learning platform built using the MERN stack with Supabase integration. Master MERN concepts through interactive quizzes, earn points, badges, and climb leaderboards.
+A comprehensive gamified learning platform built using the MERN stack with Supabase integration. Interactive quiz system where you can create, take, and manage quizzes with real-time tracking.
 
 ## 🔗 Live Links
 
