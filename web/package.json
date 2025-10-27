@@ -1,7 +1,7 @@
 {
-  "name": "mern-quest-web",
+  "name": "quiz-sprint-web",
   "version": "1.0.0",
-  "description": "Frontend for MERN Quest learning platform",
+  "description": "Frontend for Quiz Sprint learning platform",
   "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.75.0",
