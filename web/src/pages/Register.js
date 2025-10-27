@@ -69,7 +69,7 @@ const Register = () => {
         </div>
 
         {/* Right Form Panel */}
-        <div className="login-form-panel">
+        <div className="login-form-panel" style={{ paddingTop: '1.5rem' }}>
           <div className="form-header">
             <h2 className="form-welcome">
               🎯 Join Us

@@ -6,6 +6,7 @@ const Landing = () => {
   // Defer non-critical content to improve LCP
   const [deferBelowFold, setDeferBelowFold] = useState(false);
   const [deferHeroVisual, setDeferHeroVisual] = useState(false);
+  const [showNav, setShowNav] = useState(true);
 
   useEffect(() => {
     // Schedule below-the-fold sections after first paint
@@ -21,10 +22,21 @@ const Landing = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+      const heroHeight = window.innerHeight * 0.8; // Hide nav after scrolling past 80% of viewport
+      setShowNav(scrollPosition < heroHeight);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div className="landing-page">
       {/* Navigation */}
-      <nav className="landing-nav">
+      <nav className={`landing-nav ${showNav ? 'visible' : 'hidden'}`}>
         <div className="nav-container">
           <div className="nav-brand">
             <div className="brand-icon">📚</div>
@@ -254,10 +266,6 @@ const Landing = () => {
               <div className="benefit-item">
                 <span className="benefit-icon">✅</span>
                 <span>Free to start</span>
-              </div>
-              <div className="benefit-item">
-                <span className="benefit-icon">✅</span>
-                <span>No credit card required</span>
               </div>
               <div className="benefit-item">
                 <span className="benefit-icon">✅</span>

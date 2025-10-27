@@ -150,31 +150,31 @@
 .login-form-panel {
   flex: 0 0 55%;
   background: var(--bg-white);
-  padding: 2.5rem 2rem;
+  padding: 2rem 2rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   min-height: 500px;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .form-header {
-  margin-bottom: 2rem;
-  padding-top: 1rem;
+  margin-bottom: 1.5rem;
+  padding-top: 0.5rem;
 }
 
 .form-welcome {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-dark);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .form-subtitle {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--text-medium);
   font-weight: 400;
   margin-bottom: 0;
@@ -184,7 +184,7 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .form-group {
@@ -196,17 +196,17 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-dark);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.375rem;
 }
 
 .form-input {
   width: 100%;
-  padding: 0.875rem 1rem;
+  padding: 0.75rem 1rem;
   background: var(--bg-input);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-small);
   color: var(--text-dark);
-  font-size: 1rem;
+  font-size: 0.95rem;
   outline: none;
   transition: var(--transition-smooth);
   box-sizing: border-box;
@@ -252,7 +252,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin: 0.5rem 0;
+  margin: 0.25rem 0;
 }
 
 .checkbox-input {
@@ -296,8 +296,8 @@
   color: var(--text-white);
   border: none;
   border-radius: var(--radius-small);
-  padding: 0.875rem 1.5rem;
-  font-size: 1rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition-smooth);
@@ -305,7 +305,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 48px;
+  min-height: 44px;
 }
 
 .btn-primary:hover {
@@ -374,7 +374,7 @@
 
 .signup-link {
   text-align: center;
-  margin-top: 2rem;
+  margin-top: 1rem;
   font-size: 0.875rem;
   color: var(--text-medium);
 }
@@ -418,6 +418,100 @@
   gap: 0.5rem;
 }
 
+/* OTP Success Popup */
+.otp-success-popup {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-medium);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  animation: slideInRight 0.3s ease-out;
+  max-width: 350px;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.otp-success-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.otp-success-content h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #166534;
+}
+
+.otp-success-content p {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: #16a34a;
+}
+
+.otp-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #16a34a;
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: var(--transition-fast);
+}
+
+.otp-close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* OTP Verification Header */
+.otp-verification-header {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-small);
+  margin-bottom: 1rem;
+}
+
+.otp-verification-text {
+  margin: 0;
+  color: #0369a1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+}
+
 /* Loading Spinner */
 .loading-spinner {
   width: 20px;
@@ -439,13 +533,13 @@
   background: var(--bg-input);
   border-radius: var(--radius-small);
   padding: 4px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   gap: 2px;
 }
 
 .toggle-button {
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 1rem;
   border-radius: 6px;
   font-weight: 600;
   transition: var(--transition-smooth);
@@ -453,7 +547,7 @@
   cursor: pointer;
   background: transparent;
   color: var(--text-medium);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   white-space: nowrap;
 }
 
