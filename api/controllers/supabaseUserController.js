@@ -150,6 +150,49 @@ const getUserStats = async (req, res) => {
     if (scoresError) {
       console.error('Error fetching quiz scores:', scoresError);
     }
+
+    // Enrich recentScores with quiz title/category based on first answered question
+    let recentScores = [];
+    if (Array.isArray(quizScores) && quizScores.length > 0) {
+      const topScores = quizScores.slice(0, 10);
+      // Collect first question IDs from answers arrays
+      const firstQuestionIds = topScores
+        .map(s => Array.isArray(s.answers) && s.answers.length > 0 ? s.answers[0].questionId : null)
+        .filter(Boolean);
+
+      let quizMap = new Map();
+      if (firstQuestionIds.length > 0) {
+        const { data: quizzes, error: quizzesError } = await supabase
+          .from('quizzes')
+          .select(`
+            id,
+            title,
+            category_id,
+            quiz_categories:quiz_categories(id, name)
+          `)
+          .in('id', firstQuestionIds);
+        if (quizzesError) {
+          console.error('Error fetching quiz metadata:', quizzesError);
+        } else if (Array.isArray(quizzes)) {
+          quizzes.forEach(q => quizMap.set(q.id, q));
+        }
+      }
+
+      recentScores = topScores.map(score => {
+        const firstQ = Array.isArray(score.answers) && score.answers.length > 0 ? score.answers[0].questionId : null;
+        const qMeta = firstQ ? quizMap.get(firstQ) : null;
+        return {
+          score: score.score,
+          timeTaken: score.time_taken,
+          correctAnswers: score.correct_answers,
+          totalQuestions: score.total_questions,
+          pointsEarned: score.points_earned,
+          attemptedAt: score.attempted_at,
+          quizTitle: qMeta?.title || qMeta?.quiz_categories?.name || null,
+          category: qMeta?.quiz_categories?.name || null
+        };
+      });
+    }
     
     const stats = {
       totalQuizzes: user.total_quizzes || 0,
@@ -159,14 +202,7 @@ const getUserStats = async (req, res) => {
       level: user.level || 1,
       streak: user.streak || 0,
       accuracy: user.total_answers > 0 ? Math.round((user.correct_answers / user.total_answers) * 100) : 0,
-      recentScores: quizScores ? quizScores.slice(0, 10).map(score => ({
-        score: score.score,
-        timeTaken: score.time_taken,
-        correctAnswers: score.correct_answers,
-        totalQuestions: score.total_questions,
-        pointsEarned: score.points_earned,
-        attemptedAt: score.attempted_at
-      })) : []
+      recentScores
     };
     
     res.json(stats);

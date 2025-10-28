@@ -5,7 +5,7 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [users, setUsers] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalQuizzes: 0,
@@ -182,29 +182,52 @@ const Admin = () => {
     }
   };
 
+  const SkeletonBar = ({ width = '100%', height = 16, mb = 8 }) => (
+    <div style={{ width, height, background: '#1f2937', borderRadius: 4, marginBottom: mb, animation: 'pulse 1.5s ease-in-out infinite' }} />
+  );
+
+  const SkeletonStat = () => (
+    <div style={styles.statCard}>
+      <div style={styles.statIcon}> </div>
+      <SkeletonBar width="50%" height={28} mb={6} />
+      <SkeletonBar width="40%" height={12} mb={0} />
+    </div>
+  );
+
   const renderDashboard = () => (
     <div style={styles.dashboard}>
       <div style={styles.statsGrid}>
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>👥</div>
-          <div style={styles.statNumber}>{stats.totalUsers}</div>
-          <div style={styles.statLabel}>Total Users</div>
-        </div>
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>📝</div>
-          <div style={styles.statNumber}>{stats.totalQuizzes}</div>
-          <div style={styles.statLabel}>Total Quizzes</div>
-        </div>
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>❓</div>
-          <div style={styles.statNumber}>{stats.totalQuestions}</div>
-          <div style={styles.statLabel}>Total Questions</div>
-        </div>
-        <div style={styles.statCard}>
-          <div style={styles.statIcon}>📊</div>
-          <div style={styles.statNumber}>{stats.totalSessions}</div>
-          <div style={styles.statLabel}>Quiz Sessions</div>
-        </div>
+        {loading ? (
+          <>
+            <SkeletonStat />
+            <SkeletonStat />
+            <SkeletonStat />
+            <SkeletonStat />
+          </>
+        ) : (
+          <>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>👥</div>
+              <div style={styles.statNumber}>{stats.totalUsers}</div>
+              <div style={styles.statLabel}>Total Users</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>📝</div>
+              <div style={styles.statNumber}>{stats.totalQuizzes}</div>
+              <div style={styles.statLabel}>Total Quizzes</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>❓</div>
+              <div style={styles.statNumber}>{stats.totalQuestions}</div>
+              <div style={styles.statLabel}>Total Questions</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statIcon}>📊</div>
+              <div style={styles.statNumber}>{stats.totalSessions}</div>
+              <div style={styles.statLabel}>Quiz Sessions</div>
+            </div>
+          </>
+        )}
       </div>
 
       <div style={styles.quickActions}>
@@ -261,54 +284,69 @@ const Admin = () => {
         </div>
         
         <div style={styles.quizTable}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Title</th>
-                <th style={styles.th}>Category</th>
-                <th style={styles.th}>Difficulty</th>
-                <th style={styles.th}>Time (min)</th>
-                <th style={styles.th}>Status</th>
-                <th style={styles.th}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredQuizzes.map(quiz => (
-                <tr key={quiz.id}>
-                  <td style={styles.td}>{quiz.title}</td>
-                  <td style={styles.td}>
-                    <span style={styles.badge}>{quiz.category}</span>
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{...styles.badge, ...getDifficultyStyle(quiz.difficulty)}}>
-                      {quiz.difficulty}
-                    </span>
-                  </td>
-                  <td style={styles.td}>{quiz.time_limit || quiz.timeLimit} min</td>
-                  <td style={styles.td}>
-                    <span style={{...styles.statusBadge, 
-                      background: quiz.is_active ? '#10b981' : '#6b7280'}}>
-                      {quiz.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <div style={styles.actionButtons}>
-                      <button style={styles.btnSmall} onClick={() => loadQuizQuestions(quiz.id)}>
-                        View
-                      </button>
-                      <button style={styles.btnSmall} onClick={() => editQuiz(quiz)}>
-                        Edit
-                      </button>
-                      <button style={{...styles.btnSmall, ...styles.btnDanger}} 
-                              onClick={() => deleteQuiz(quiz.id)}>
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+          {loading ? (
+            <div>
+              {[1,2,3,4].map(i => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr', gap: '1rem', padding: '0.75rem 0', borderBottom: '1px solid #1f2937' }}>
+                  <SkeletonBar width="90%" />
+                  <SkeletonBar width="60%" />
+                  <SkeletonBar width="40%" />
+                  <SkeletonBar width="30%" />
+                  <SkeletonBar width="30%" />
+                  <SkeletonBar width="50%" />
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Title</th>
+                  <th style={styles.th}>Category</th>
+                  <th style={styles.th}>Difficulty</th>
+                  <th style={styles.th}>Time (min)</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuizzes.map(quiz => (
+                  <tr key={quiz.id}>
+                    <td style={styles.td}>{quiz.title}</td>
+                    <td style={styles.td}>
+                      <span style={styles.badge}>{quiz.category}</span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{...styles.badge, ...getDifficultyStyle(quiz.difficulty)}}>
+                        {quiz.difficulty}
+                      </span>
+                    </td>
+                    <td style={styles.td}>{quiz.time_limit || quiz.timeLimit} min</td>
+                    <td style={styles.td}>
+                      <span style={{...styles.statusBadge, 
+                        background: quiz.is_active ? '#10b981' : '#6b7280'}}>
+                        {quiz.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <div style={styles.actionButtons}>
+                        <button style={styles.btnSmall} onClick={() => loadQuizQuestions(quiz.id)}>
+                          View
+                        </button>
+                        <button style={styles.btnSmall} onClick={() => editQuiz(quiz)}>
+                          Edit
+                        </button>
+                        <button style={{...styles.btnSmall, ...styles.btnDanger}} 
+                                onClick={() => deleteQuiz(quiz.id)}>
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -507,30 +545,43 @@ const Admin = () => {
     <div style={styles.section}>
       <h3 style={styles.sectionTitle}>User Management</h3>
       <div style={styles.tableContainer}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Name</th>
-              <th style={styles.th}>Email</th>
-              <th style={styles.th}>Role</th>
-              <th style={styles.th}>Quizzes Taken</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.id}>
-                <td style={styles.td}>{user.name}</td>
-                <td style={styles.td}>{user.email}</td>
-                <td style={styles.td}>
-                  <span style={styles.badge}>
-                    {user.role || (user.is_admin ? 'admin' : 'user')}
-                  </span>
-                </td>
-                <td style={styles.td}>{user.quizzes_taken || 0}</td>
-              </tr>
+        {loading ? (
+          <div>
+            {[1,2,3,4,5,6,7].map(i => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr', gap: '1rem', padding: '0.75rem 0', borderBottom: '1px solid #1f2937' }}>
+                <SkeletonBar width="90%" />
+                <SkeletonBar width="80%" />
+                <SkeletonBar width="50%" />
+                <SkeletonBar width="30%" />
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Name</th>
+                <th style={styles.th}>Email</th>
+                <th style={styles.th}>Role</th>
+                <th style={styles.th}>Quizzes Taken</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.id}>
+                  <td style={styles.td}>{user.name}</td>
+                  <td style={styles.td}>{user.email}</td>
+                  <td style={styles.td}>
+                    <span style={styles.badge}>
+                      {user.role || (user.is_admin ? 'admin' : 'user')}
+                    </span>
+                  </td>
+                  <td style={styles.td}>{user.quizzes_taken || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -565,14 +616,6 @@ const Admin = () => {
     };
     return styles[difficulty] || { background: '#6b7280' };
   };
-
-  if (loading) {
-    return (
-      <div style={styles.loading}>
-        <div style={styles.spinner}>⏳ Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div style={styles.container}>
