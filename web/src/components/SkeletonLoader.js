@@ -1,60 +1,150 @@
-import React, { memo } from 'react';
+import React from 'react';
 
-const SkeletonCard = memo(() => (
-  <div className="animate-pulse">
-    <div className="bg-gray-200 rounded-lg p-6 mb-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="h-4 bg-gray-300 rounded w-20"></div>
-        <div className="h-4 bg-gray-300 rounded w-16"></div>
-      </div>
-      <div className="h-6 bg-gray-300 rounded w-3/4 mb-2"></div>
-      <div className="h-4 bg-gray-300 rounded w-full mb-2"></div>
-      <div className="h-4 bg-gray-300 rounded w-2/3"></div>
+export const SkeletonCard = ({ height = '200px' }) => (
+  <div style={{
+    backgroundColor: '#111827',
+    borderRadius: '1rem',
+    border: '1px solid #1f2937',
+    overflow: 'hidden',
+    height
+  }}>
+    <div style={{
+      padding: '2rem',
+      background: 'linear-gradient(135deg, #0b1220 0%, #0f172a 100%)',
+      borderBottom: '1px solid #1f2937'
+    }}>
+      <div style={{ 
+        width: '60%', 
+        height: '20px', 
+        background: '#1f2937', 
+        borderRadius: '4px',
+        marginBottom: '0.5rem',
+        animation: 'pulse 1.5s ease-in-out infinite'
+      }} />
+      <div style={{ 
+        width: '40%', 
+        height: '14px', 
+        background: '#1f2937', 
+        borderRadius: '4px',
+        animation: 'pulse 1.5s ease-in-out infinite'
+      }} />
+    </div>
+    <div style={{ padding: '2rem' }}>
+      {[1, 2, 3].map((i) => (
+        <div key={i} style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          marginBottom: '1rem',
+          padding: '1.25rem',
+          border: '1px solid #1f2937',
+          borderRadius: '0.75rem'
+        }}>
+          <div style={{ 
+            width: '40px', 
+            height: '40px', 
+            background: '#1f2937', 
+            borderRadius: '8px',
+            animation: 'pulse 1.5s ease-in-out infinite'
+          }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ 
+              width: '70%', 
+              height: '16px', 
+              background: '#1f2937', 
+              borderRadius: '4px',
+              marginBottom: '0.5rem',
+              animation: 'pulse 1.5s ease-in-out infinite'
+            }} />
+            <div style={{ 
+              width: '50%', 
+              height: '12px', 
+              background: '#1f2937', 
+              borderRadius: '4px',
+              animation: 'pulse 1.5s ease-in-out infinite'
+            }} />
+          </div>
+        </div>
+      ))}
     </div>
   </div>
-));
+);
 
-const QuizSkeleton = memo(() => (
-  <div className="quiz-page" style={{ background: '#0f172a', color: '#e5e7eb' }}>
-    <div className="quiz-content">
-      {/* Header Skeleton */}
-      <div className="page-header" style={{ background: 'linear-gradient(135deg, #111827, #0b1220)', borderBottom: '1px solid #1f2937', padding: '3rem 2rem' }}>
-        <div className="animate-pulse">
-          <div className="h-12 bg-gray-700 rounded w-96 mx-auto mb-4"></div>
-          <div className="h-6 bg-gray-700 rounded w-80 mx-auto"></div>
-        </div>
-      </div>
-      
-      {/* Quiz Categories Grid Skeleton */}
-      <div className="quiz-grid" style={{ padding: '3rem 2rem', maxWidth: '1400px', margin: '0 auto' }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="card animate-pulse" style={{ border: '1px solid #1f2937', background: '#111827', borderRadius: '0.5rem' }}>
-              <div className="card-header" style={{ background: 'linear-gradient(135deg, #0b1220, #0f172a)', borderBottom: '1px solid #1f2937', padding: '1.5rem' }}>
-                <div className="flex justify-between items-center mb-4">
-                  <div className="h-6 bg-gray-700 rounded w-16"></div>
-                  <div className="h-6 bg-gray-700 rounded w-12"></div>
-                </div>
-                <div className="h-8 bg-gray-700 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-700 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-700 rounded w-2/3"></div>
-              </div>
-              <div className="card-content" style={{ padding: '1.5rem' }}>
-                <div className="flex justify-between items-center mb-4">
-                  <div className="h-4 bg-gray-700 rounded w-24"></div>
-                  <div className="h-4 bg-gray-700 rounded w-16"></div>
-                </div>
-                <div className="h-10 bg-gray-700 rounded w-full"></div>
-              </div>
+export const SkeletonStat = () => (
+  <div style={{
+    backgroundColor: '#111827',
+    borderRadius: '1rem',
+    padding: '2rem',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+    border: '1px solid #1f2937'
+  }}>
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      marginBottom: '1.5rem' 
+    }}>
+      <div style={{ 
+        width: '80px', 
+        height: '20px', 
+        background: '#1f2937', 
+        borderRadius: '4px',
+        animation: 'pulse 1.5s ease-in-out infinite'
+      }} />
+      <div style={{ 
+        width: '30px', 
+        height: '30px', 
+        background: '#1f2937', 
+        borderRadius: '4px',
+        animation: 'pulse 1.5s ease-in-out infinite'
+      }} />
+    </div>
+    <div style={{ 
+      width: '120px', 
+      height: '40px', 
+      background: '#1f2937', 
+      borderRadius: '4px',
+      marginBottom: '0.5rem',
+      animation: 'pulse 1.5s ease-in-out infinite'
+    }} />
+    <div style={{ 
+      width: '100px', 
+      height: '16px', 
+      background: '#1f2937', 
+      borderRadius: '4px',
+      animation: 'pulse 1.5s ease-in-out infinite'
+    }} />
+  </div>
+);
+
+export const QuizSkeleton = () => (
+  <div style={{ background: '#0f172a', minHeight: '100vh', color: '#e5e7eb' }}>
+    <div style={{ padding: '3rem 2rem', maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+        gap: '2rem',
+        marginBottom: '3rem'
+      }}>
+        {[1,2,3,4,5,6].map(i => (
+          <div key={i} style={{
+            backgroundColor: '#111827',
+            borderRadius: '1rem',
+            border: '1px solid #1f2937',
+            padding: '1.5rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ width: 80, height: 20, background: '#1f2937', borderRadius: 4, animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div style={{ width: 40, height: 20, background: '#1f2937', borderRadius: 4, animation: 'pulse 1.5s ease-in-out infinite' }} />
             </div>
-          ))}
-        </div>
+            <div style={{ width: '70%', height: 24, background: '#1f2937', borderRadius: 4, marginBottom: 8, animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: '90%', height: 14, background: '#1f2937', borderRadius: 4, marginBottom: 6, animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: '85%', height: 14, background: '#1f2937', borderRadius: 4, animation: 'pulse 1.5s ease-in-out infinite' }} />
+          </div>
+        ))}
       </div>
     </div>
   </div>
-));
+);
 
-SkeletonCard.displayName = 'SkeletonCard';
-QuizSkeleton.displayName = 'QuizSkeleton';
-
-export { SkeletonCard, QuizSkeleton };
+export default SkeletonCard;
